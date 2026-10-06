@@ -7,13 +7,14 @@ import { Header } from '../components/Header'
 import { Seal } from '../components/Seal'
 import { StepRow } from '../components/StepRow'
 import { Counters } from '../components/Counters'
+import { Icon } from '../components/Icon'
 import { TxLink } from '../components/bits'
 import { flagLabel, reasonLabel } from '../lib/reasons'
 import { isAddress, timeAgo } from '../lib/format'
 import { kb, prepareUpload, UploadError } from '../lib/upload'
 
 export default function BountyPage() {
-  const { t, lang } = useLang()
+  const { t, lang, tr } = useLang()
   const config = useQuery({ queryKey: ['config'], queryFn: api.config, staleTime: 60_000 })
   const stats = useQuery({ queryKey: ['stats'], queryFn: api.stats, refetchInterval: 3000 })
   const board = useQuery({ queryKey: ['leaderboard'], queryFn: api.leaderboard, refetchInterval: 5000 })
@@ -23,10 +24,11 @@ export default function BountyPage() {
   const serial = String((stats.data?.outside.attempts ?? 0) + 1).padStart(6, '0')
 
   return (
-    <div className="min-h-dvh">
+    <div className="workspace">
       <Header />
-      <main className="mx-auto grid max-w-6xl gap-x-10 gap-y-8 px-4 pb-16 pt-6 lg:grid-cols-[1.05fr_0.95fr] lg:pt-10">
-        <section className="lg:pt-2">
+      <main tabIndex={-1} className="page-content bounty-layout grid gap-x-8 gap-y-8 xl:grid-cols-[1fr_1fr]">
+        <section className="bounty-intro xl:pt-2">
+          <p className="eyebrow"><Icon name="shield" size={15} />{tr("THE COUNTERSIGN CHALLENGE", "会签挑战")}</p>
           <h1 className="cond keep text-[2.6rem] font-extrabold leading-[1.08] sm:text-[3.4rem]">{t.hero}</h1>
           <p className="mt-4 max-w-[34rem] text-[1.02rem] text-ink2">{t.hero_sub}</p>
           {testnet && (
@@ -36,21 +38,21 @@ export default function BountyPage() {
           )}
 
           {/* two prizes as tear-off counterfoils */}
-          <div className="mt-7 grid grid-cols-2 overflow-hidden ruled bg-field">
+          <div className="mt-7 grid grid-cols-2 gap-3">
             <Prize title={t.prize_fool_title} body={t.prize_fool_body} reward={t.prize_fool_reward} />
-            <div className="border-l-2 border-dashed border-rule">
+            <div className="h-full">
               <Prize title={t.prize_rob_title} body={t.prize_rob_body} reward={t.prize_rob_reward} strong />
             </div>
           </div>
 
-          <div className="mt-8 hidden lg:block">
+          <div className="mt-8 hidden xl:block">
             <CountersBlock stats={stats.data} symbol={symbol} />
             <Leaderboard entries={board.data} />
           </div>
         </section>
 
         <section aria-label={t.form_title}>
-          <div className="lg:sticky lg:top-4">
+          <div className="xl:sticky xl:top-4">
             {attemptId ? (
               <Result id={attemptId} onAgain={() => setAttemptId(null)} />
             ) : (
@@ -59,12 +61,12 @@ export default function BountyPage() {
           </div>
         </section>
 
-        <section className="lg:hidden">
+        <section className="xl:hidden">
           <CountersBlock stats={stats.data} symbol={symbol} />
           <Leaderboard entries={board.data} />
         </section>
 
-        <section className="max-w-[40rem] lg:col-span-2">
+        <section className="ruled bg-field p-6 xl:col-span-2">
           <h2 className="cond text-xl font-bold">{t.rules_title}</h2>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-ink2">
             {t.rules.map((r) => (
@@ -80,7 +82,7 @@ export default function BountyPage() {
 
 function Prize({ title, body, reward, strong }: { title: string; body: string; reward: string; strong?: boolean }) {
   return (
-    <div className="flex h-full flex-col p-3.5 sm:p-4">
+    <div className="prize-card flex h-full flex-col">
       <h3 className="cond text-[1.35rem] font-bold leading-tight" style={{ color: strong ? 'var(--cinnabar)' : 'var(--ink)' }}>
         {title}
       </h3>
@@ -190,36 +192,28 @@ function SubmitForm({ serial, onSubmitted }: { serial: string; onSubmitted: (id:
     }
   }
 
-  const label = 'w-[7.4rem] shrink-0 border-r border-rule bg-paper px-3 py-3 text-[0.9rem] leading-snug text-rule2 sm:w-[8rem]'
   return (
-    <form onSubmit={submit} className="ruled-strong bg-field" noValidate>
-      <div className="flex items-baseline justify-between border-b-[1.5px] border-rule2 px-4 py-3">
-        <h2 className="cond text-[1.6rem] font-bold">{t.form_title}</h2>
+    <form onSubmit={submit} className="bounty-form" noValidate>
+      <div className="panel-heading">
+        <h2 className="text-lg font-semibold">{t.form_title}</h2>
         <span className="text-sm text-rule2">
           {t.serial} <span className="num font-mono text-cinnabar">{serial}</span>
         </span>
       </div>
 
-      <label className="flex rule-b">
-        <span className={label}>{t.nickname}</span>
-        <input className="w-full bg-transparent px-3 py-3 outline-none focus:bg-sheet" value={nickname} maxLength={24} placeholder={t.nickname_ph} onChange={(e) => setNickname(e.target.value)} />
-      </label>
-      <label className="flex rule-b">
-        <span className={label}>{t.address}</span>
-        <span className="w-full">
-          <input className="w-full bg-transparent px-3 pt-3 font-mono text-[0.9rem] outline-none focus:bg-sheet" value={address} placeholder="0x…" spellCheck={false} autoCapitalize="off" onChange={(e) => setAddress(e.target.value)} />
-          <span className="block px-3 pb-2 text-xs text-ink2">{t.address_hint}</span>
-        </span>
-      </label>
+      <div className="form-personal">
+        <label><span>{t.nickname}</span><input className="field" value={nickname} maxLength={24} placeholder={t.nickname_ph} onChange={e => setNickname(e.target.value)} /></label>
+        <label><span>{t.address} <span className="text-ink2">({lang === 'zh' ? '选填' : 'optional'})</span></span><input className="field font-mono text-sm" value={address} placeholder="0x…" spellCheck={false} autoCapitalize="off" onChange={e => setAddress(e.target.value)} /><span className="text-xs text-ink2">{t.address_hint}</span></label>
+      </div>
 
-      <fieldset className="rule-b px-4 py-3">
+      <fieldset className="px-5 py-5">
         <legend className="sr-only">{t.agent_pick}</legend>
         <p className="mb-2 text-[0.9rem] text-rule2">{t.agent_pick}</p>
         <div className="grid grid-cols-2 gap-2">
           {(['guarded', 'naive'] as const).map((k) => (
             <label key={k} className={`cursor-pointer rounded-box border p-2.5 ${agent === k ? 'border-ink bg-sheet shadow-[inset_0_0_0_1px_var(--ink)]' : 'border-rule'}`}>
               <input type="radio" name="agent" value={k} checked={agent === k} onChange={() => setAgent(k)} className="sr-only" />
-              <span className="block font-semibold">{k === 'guarded' ? t.agent_guarded : t.agent_naive}</span>
+              <span className="mb-2 flex items-center gap-2 text-sm font-semibold"><Icon name={k === 'guarded' ? 'shield' : 'agents'} size={16} />{k === 'guarded' ? t.agent_guarded : t.agent_naive}</span>
               <span className="mt-0.5 block text-[0.82rem] leading-snug text-ink2">{k === 'guarded' ? t.agent_guarded_hint : t.agent_naive_hint}</span>
             </label>
           ))}
@@ -227,7 +221,7 @@ function SubmitForm({ serial, onSubmitted }: { serial: string; onSubmitted: (id:
         {agent === 'naive' && <p className="mt-2 text-[0.82rem] text-ink">{t.naive_disclosure}</p>}
       </fieldset>
 
-      <div className="px-4 py-3">
+      <div className="border-t border-rule px-5 py-5">
         <div className="mb-2.5 flex gap-1" role="tablist">
           {(['upload', 'message'] as const).map((m) => (
             <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={`rounded-box px-3 py-1.5 text-[0.92rem] ${mode === m ? 'bg-ink text-field' : 'text-ink hover:bg-paper'}`}>
@@ -246,7 +240,7 @@ function SubmitForm({ serial, onSubmitted }: { serial: string; onSubmitted: (id:
                   {file.name} <span className="text-ink2">({kb(file.size)})</span>
                 </span>
               ) : (
-                <span className="font-semibold">{t.upload_cta}</span>
+                <><Icon name="upload" className="mb-3 text-ink2" size={24} /><span className="font-semibold">{t.upload_cta}</span></>
               )}
               <span className="mt-1 text-xs text-ink2">{t.upload_hint}</span>
             </label>
@@ -260,7 +254,7 @@ function SubmitForm({ serial, onSubmitted }: { serial: string; onSubmitted: (id:
           </p>
         )}
         <button type="submit" className="btn btn-ink mt-3 w-full py-3 text-[1.05rem]" disabled={busy || shrinking}>
-          {busy ? t.submitting : t.submit}
+          {busy ? t.submitting : t.submit}<Icon name="arrow" size={17} />
         </button>
       </div>
     </form>

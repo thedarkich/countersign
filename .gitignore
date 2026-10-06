@@ -12,7 +12,7 @@ __pycache__/
 
 contracts/broadcast/
 contracts/lib/
-lib/
+/lib/
 contracts/crytic-export/
 contracts/*.dot
 contracts/*.dot.png

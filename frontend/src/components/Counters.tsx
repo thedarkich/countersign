@@ -1,6 +1,7 @@
 import type { StatBlock } from '../api/types'
 import { useLang } from '../i18n'
 import { fmtAmount, fmtInt } from '../lib/format'
+import { Icon, type IconName } from './Icon'
 
 type Tile = { key: string; label: string; value: string; tone?: 'jade' | 'cinnabar' | 'ink'; note?: string }
 
@@ -23,6 +24,19 @@ export function Counters({ stats, symbol, size = 'md' }: { stats?: StatBlock; sy
   const tiles = useTiles(stats, symbol)
   if (!stats) return <div className="h-24 animate-pulse rounded-box bg-paper2" aria-hidden />
   const stage = size === 'stage'
+  if (!stage) {
+    const primary = ['attempts', 'guard', 'blocks', 'lost']
+    const icons: Record<string, IconName> = { attempts: 'file', guard: 'shield', blocks: 'flag', lost: 'wallet' }
+    return <div>
+      <dl className="metric-grid">
+        {primary.map(key => {
+          const x = tiles.find(tile => tile.key === key)!
+          return <div key={key} className="metric-card"><dt>{x.label}<Icon name={icons[key]} size={17} /></dt><dd className={x.tone === 'jade' ? 'text-jade' : x.tone === 'cinnabar' ? 'text-cinnabar' : ''}>{x.value}{x.note && <small>{x.note}</small>}</dd></div>
+        })}
+      </dl>
+      <dl className="metric-foot">{tiles.filter(x => !primary.includes(x.key)).map(x => <div key={x.key} className="flex"><dt>{x.label}</dt><dd><strong>{x.value}</strong></dd></div>)}</dl>
+    </div>
+  }
   return (
     <dl className={`grid ${stage ? 'grid-cols-4 gap-px' : 'grid-cols-2 gap-px sm:grid-cols-4'} overflow-hidden ruled bg-rule`}>
       {tiles.map((x) => {

@@ -1,3 +1,5 @@
+> 2026-10-06 redesign: the approved SpendMate references now inform the sidebar, dark/light surfaces, metric cards, agent wallets and activity layout. Four routes, owner actions and API shapes remain. See [design/provenance/checks](../docs/FRONTEND_REDESIGN.md). Ledger agent summaries are a bounded event view; full public reputation and live API wiring remain pending.
+
 # Countersign frontend
 
 Four screens, one Vite + React app:

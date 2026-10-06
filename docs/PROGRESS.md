@@ -10,10 +10,14 @@ Codex keeps this file current. Newest entries at the top of each section.
 | 1 Contract | testnet deployed, source verified and live proof passed; mainnet pending | 92 local tests pass, including the expanded operations rehearsal. Verified testnet vault, 8 delayed setup changes, 20 tUSDT funding and real Paid/PayoutMismatch/OverBudget/DuplicateInvoice receipts. Vault holds 19.9 tUSDT after the 0.1 proof payment. Mainnet owner/deployer/agents each have 0 BOT; no mainnet deployment or phase-completion tag. |
 | 2 Pipeline | local workflow and chain adapter tested; live acceptance pending | 57 unit/workflow tests and 7 isolated Anvil integration tests pass. Full local flow with mocked AI: clean guarded invoice Paid; redirected naive proposal Blocked/PayoutMismatch. SQLite persistence, bounded model transport, legacy signing, nonce handling and receipt decoding implemented. CLI/dataset, indexer recovery/backfill/caches, API and real-model/funded-network acceptance remain. No paid AI calls or public-chain transactions in this build. |
 | 3 Bounty live | not started | |
-| 4 Product | not started | |
+| 4 Product | requested frontend redesign implemented and mock-verified; live wiring pending | SpendMate-inspired sidebar, metrics, agent wallets, activity and simpler forms across the four routes. Typecheck/live/mock builds and desktop/phone browser checks pass. Full reputation read model and API remain; this is not phase completion. |
 | 5 Learning loop | not started | |
 | 6 Public Good lane | not started | |
 | 7 Submit | not started | |
+
+## Latest frontend work — 2026-10-06
+
+Implemented the human-requested SpendMate-inspired redesign from the supplied screenshots and video. [Design, provenance and verification](FRONTEND_REDESIGN.md) records the exact scope. The local mock preview runs at `http://127.0.0.1:4173/#/ledger`; no model credit or chain gas was spent. Full live API wiring and the SPEC §3.11 reputation backend remain the next build work. Mainnet funding and organizer permission remain as recorded below. Fixed a pre-existing overly broad Git ignore rule so required frontend helper files are included in a checkout.
 
 ## Public wallet addresses
 
@@ -171,7 +175,7 @@ All times below are China time (UTC+8), from the original SPEC section 1 plan. T
 
 Subsequent user decision: use SpendMate's frontend as the design/reuse base for a more user-friendly Countersign interface after current setup is finished. This supersedes the earlier recommendation to preserve all existing presentation. Implementation planning must preserve Countersign's core workflows and clearly identify any additional functional scope; a redesign does not by itself implement or approve a general-purpose wallet-management agent.
 
-Reviewed 2026-10-06 at public source commit `1fed614f9c79e1932e5e8927e3e043a15ade5170`. Sources: [ETHGlobal showcase](https://ethglobal.com/showcase/spendmate-wmewx), [repository](https://github.com/Meriem-BM/x402ops), [public demo landing](https://x402ops.vercel.app/). The landing page requires a wallet connection; no wallet was connected, no transactions were tested, and the submission's deployed behavior was not independently verified. The README's video URL is a placeholder, so no working video was reviewed.
+Reviewed 2026-10-06 at public source commit `1fed614f9c79e1932e5e8927e3e043a15ade5170`. Sources: [ETHGlobal showcase](https://ethglobal.com/showcase/spendmate-wmewx), [repository](https://github.com/Meriem-BM/x402ops), [public demo landing](https://x402ops.vercel.app/). The landing page requires a wallet connection; no wallet was connected, no transactions were tested, and the submission's deployed behavior was not independently verified. At that initial review, the README's video URL was a placeholder. The human later supplied a local video; see FRONTEND_REDESIGN.md for the subsequent visual review.
 
 The submission describes no-code agent creation, dedicated CDP wallets, spending-policy configuration and activity tracking. The repository includes a wallet-specific chat page, a wallet-creation route, policy cards and usage/activity components. These are useful product patterns, but implementation claims need qualification:
 

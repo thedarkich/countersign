@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { shortAddr } from '../lib/format'
 import { useLang } from '../i18n'
-import { setAdminToken, getAdminToken } from '../api/client'
+import { api, setAdminToken, getAdminToken } from '../api/client'
 import type { EvalResults } from '../api/types'
 
 export function Address({ value, lead = 6, tail = 4, className = '' }: { value?: string | null; lead?: number; tail?: number; className?: string }) {
@@ -58,14 +58,15 @@ export function Countdown({ to, onDone }: { to: string; onDone?: () => void }) {
 }
 
 export function AdminGate({ children }: { children: ReactNode }) {
-  const { t } = useLang()
+  const { t, tr } = useLang()
   const [token, setToken] = useState(getAdminToken() ?? '')
   const [ok, setOk] = useState(!!getAdminToken())
   if (ok) return <>{children}</>
   return (
-    <div className="mx-auto mt-16 max-w-sm px-4">
+    <main tabIndex={-1} className="mx-auto mt-16 max-w-md rounded-box border border-rule bg-field p-6">
       <h1 className="cond text-3xl font-bold">{t.admin_title}</h1>
       <p className="mt-2 text-ink2">{t.admin_body}</p>
+      {api.mode === 'mock' && <p className="mt-3 text-sm text-ink2">{tr('Mock preview: enter any text to explore. No wallet is needed.', '模拟预览：输入任意文字即可体验，无需钱包。')}</p>}
       <form
         className="mt-5 flex gap-2"
         onSubmit={(e) => {
@@ -80,7 +81,7 @@ export function AdminGate({ children }: { children: ReactNode }) {
           {t.admin_go}
         </button>
       </form>
-    </div>
+    </main>
   )
 }
 

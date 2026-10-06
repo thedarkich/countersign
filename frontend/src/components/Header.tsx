@@ -1,61 +1,52 @@
 import { NavLink, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useLang } from '../i18n'
-import { BrandSeal } from './Seal'
 import { LangSwitch, ThemeSwitch } from './Toggles'
-import { api, getAdminToken } from '../api/client'
+import { Icon, type IconName } from './Icon'
+import { api } from '../api/client'
 
 export function Header({ compact = false }: { compact?: boolean }) {
-  const { t } = useLang()
+  const { t, tr } = useLang()
   const loc = useLocation()
-  const teamRoute = loc.pathname.startsWith('/inbox') || loc.pathname.startsWith('/controls')
-  const showTeam = teamRoute || !!getAdminToken()
-  const links = [
-    { to: '/bounty', label: t.nav_bounty },
-    { to: '/ledger', label: t.nav_ledger },
-    ...(showTeam
-      ? [
-          { to: '/inbox', label: t.nav_inbox },
-          { to: '/controls', label: t.nav_controls },
-        ]
-      : []),
+  useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
+  const config = useQuery({ queryKey: ['config'], queryFn: api.config, staleTime: 60_000 })
+  const links: { to: string; label: string; icon: IconName; detail: string }[] = [
+    { to: '/ledger', label: t.nav_ledger, icon: 'grid', detail: tr('Overview & activity', '概览与记录') },
+    { to: '/inbox', label: t.nav_inbox, icon: 'inbox', detail: tr('Invoice workspace', '发票工作台') },
+    { to: '/controls', label: t.nav_controls, icon: 'agents', detail: tr('Agents & policies', 'Agent 与规则') },
+    { to: '/bounty', label: t.nav_bounty, icon: 'shield', detail: tr('Test the defenses', '挑战防线') },
   ]
-  const badge = 'shrink-0 whitespace-nowrap rounded-box border border-dashed border-ink2 px-1.5 py-0.5 text-xs text-ink2'
-  // phones: brand and switches on top, the page tabs on their own row underneath
+  const current = links.find(l => l.to === loc.pathname) ?? links[0]
+  const net = loc.pathname === '/bounty' ? config.data?.bounty_network ?? config.data?.network : config.data?.network
+  const network = net === 'testnet' ? tr('BOT Testnet', 'BOT 测试网') : net === 'mainnet' ? tr('BOT Mainnet', 'BOT 主网') : tr('Connecting…', '连接中…')
   return (
-    <header className="guilloche rule-b">
-      <div className={`mx-auto flex max-w-6xl flex-wrap items-center gap-x-2 gap-y-1.5 px-4 sm:flex-nowrap sm:gap-x-3 ${compact ? 'py-2' : 'pb-2 pt-3 sm:py-3'}`}>
-        <NavLink to="/bounty" className="flex shrink-0 items-center gap-2" aria-label="Countersign 会签">
-          <BrandSeal size={compact ? 30 : 34} />
-          <span className="cond text-[1.3rem] font-bold leading-none tracking-tight sm:text-[1.35rem]">Countersign</span>
+    <>
+      <a className="skip-link" href={'#' + loc.pathname} onClick={e => { e.preventDefault(); document.querySelector<HTMLElement>('main')?.focus() }}>{tr('Skip to content', '跳到正文')}</a>
+      <aside className="workspace-sidebar">
+        <NavLink to="/ledger" className="workspace-brand" aria-label="Countersign 会签">
+          <span className="brand-symbol"><Icon name="shield" size={22} /></span>
+          <span>Countersign<span className="brand-caption">{tr('BOUND BY DESIGN', '让权限有边界')}</span></span>
         </NavLink>
-        {api.mode === 'mock' && (
-          <span className={`ml-1 hidden sm:inline ${badge}`} title="VITE_API_MODE=mock">
-            {t.mock_badge}
-          </span>
-        )}
-        <div className="order-2 ml-auto flex shrink-0 items-center gap-1 sm:order-3 sm:ml-0">
-          <LangSwitch />
-          <ThemeSwitch />
-        </div>
-        <nav className="order-3 -mx-2 flex w-[calc(100%+1rem)] min-w-0 items-center gap-0.5 overflow-x-auto text-[0.95rem] sm:order-2 sm:mx-0 sm:ml-auto sm:w-auto" aria-label={t.nav_label}>
-          {links.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              className={({ isActive }) =>
-                `shrink-0 whitespace-nowrap rounded-box px-2 py-1 sm:px-2.5 sm:py-1.5 ${isActive ? 'bg-ink text-field' : 'text-ink hover:bg-paper'}`
-              }
-            >
-              {l.label}
-            </NavLink>
-          ))}
-          {api.mode === 'mock' && (
-            <span className={`ml-auto mr-2 sm:hidden ${badge}`} title="VITE_API_MODE=mock">
-              {t.mock_badge}
-            </span>
-          )}
+        <p className="nav-eyebrow">{tr('WORKSPACE', '工作空间')}</p>
+        <nav aria-label={t.nav_label} className="workspace-nav">
+          {links.map(l => <NavLink key={l.to} to={l.to} className={({ isActive }) => `workspace-link ${isActive ? 'is-active' : ''}`}><Icon name={l.icon} /><span>{l.label}<small>{l.detail}</small></span></NavLink>)}
         </nav>
-      </div>
-    </header>
+        <div className="sidebar-note"><Icon name="shield" size={19} /><p>{tr('AI proposes.', 'AI 提出付款。')}<br /><strong>{tr('The vault decides.', '金库执行规则。')}</strong></p></div>
+        <div className="sidebar-footer"><span className="status-dot" /><span>{network}<small>{api.mode === 'mock' ? tr('Simulated workspace', '模拟工作空间') : tr('Configured network', '当前配置网络')}</small></span></div>
+      </aside>
+      <header className={`workspace-header ${compact ? 'compact' : ''}`}>
+        <NavLink to="/ledger" className="mobile-brand"><span className="brand-symbol"><Icon name="shield" size={18} /></span><span>Countersign</span></NavLink>
+        <div className="header-breadcrumb"><span>{tr('Workspace', '工作空间')}</span><span>/</span><strong>{current.label}</strong></div>
+        <div className="header-tools">
+          <span className="network-pill"><span className="status-dot" />{network}</span>
+          {api.mode === 'mock' && <span className="mock-pill">{t.mock_badge}</span>}
+          <LangSwitch /><ThemeSwitch />
+        </div>
+        <nav className="mobile-nav" aria-label={tr('Mobile navigation', '移动导航')}>
+          {links.map(l => <NavLink key={l.to} to={l.to} className={({ isActive }) => isActive ? 'is-active' : ''}><Icon name={l.icon} size={16} />{l.label}</NavLink>)}
+        </nav>
+      </header>
+    </>
   )
 }

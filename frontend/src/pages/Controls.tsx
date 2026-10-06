@@ -6,6 +6,7 @@ import { parseUnits, type Abi, type Address as Addr, type Hex } from 'viem'
 import { api } from '../api/client'
 import type { AppConfig, ChangeKind, PendingChange, Registry } from '../api/types'
 import { useLang } from '../i18n'
+import { Icon } from '../components/Icon'
 import { Header } from '../components/Header'
 import { AdminGate, Address, Countdown, TxLink } from '../components/bits'
 import { countersignAbi } from '../abi/Countersign'
@@ -100,7 +101,7 @@ function toCall(a: Action, decimals: number): { functionName: string; args: read
 export default function ControlsPage() {
   const config = useQuery({ queryKey: ['config'], queryFn: api.config, staleTime: 60_000 })
   return (
-    <div className="min-h-dvh">
+    <div className="workspace">
       <Header />
       <AdminGate>
         {!config.data ? (
@@ -251,12 +252,12 @@ function Controls({ config, signer, banner }: { config: AppConfig; signer: Signe
   const unpausePending = !!r?.pending_changes.some((c) => c.kind === 'Unpause')
 
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-24 pt-6">
-      <h1 className="cond text-[2.4rem] font-extrabold leading-tight">{tr('Controls', '控制台')}</h1>
+    <main tabIndex={-1} className="page-content ">
+      <h1 className="cond text-[2.4rem] font-extrabold leading-tight">{tr('Agents & controls', 'Agent 与控制台')}</h1>
       <p className="max-w-[44rem] text-ink2">
         {tr(
-          `Changes that make the vault safer apply at once. Anything that could move money waits ${waitText}, which leaves time to cancel it if the owner key is stolen.`,
-          `让金库更安全的操作马上生效。可能让钱流出去的操作要等${waitText}，万一所有者密钥被盗，还来得及取消。`,
+          `Manage agent wallets, approved vendors and spending limits. Restrictions apply immediately; new permissions wait ${waitText} before execution.`,
+          `管理 Agent 钱包、已批准的供应商和支出限额。收紧权限立即生效，新增权限需等待${waitText}才能执行。`,
         )}
       </p>
       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm">
@@ -275,32 +276,34 @@ function Controls({ config, signer, banner }: { config: AppConfig; signer: Signe
       ) : (
         <div className="mt-6 space-y-6">
           {/* status */}
-          <section className="grid overflow-hidden ruled-strong bg-field sm:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
+          <section aria-label={tr("Vault overview", "金库概览")}><div className="metric-grid">
             <Figure label={tr('Payments', '付款')} value={r.paused ? tr('Paused', '已暂停') : tr('Running', '正常')} color={r.paused ? 'var(--cinnabar)' : 'var(--jade)'} />
             <Figure label={tr('In the vault', '金库余额')} value={fmtAmount(r.vault_balance)} unit={symbol} />
             <Figure label={tr('Daily cap', '每日限额')} value={fmtAmount(r.daily_cap)} unit={symbol} />
             <Figure label={tr('Left today', '今日剩余')} value={fmtAmount(r.remaining_today)} unit={symbol} />
-            <div className="flex items-center gap-2 border-t border-rule p-4 sm:border-l sm:border-t-0">
+            </div><div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-box border border-rule bg-field px-5 py-4">
+              <p className="flex items-center gap-2 text-sm text-ink2"><Icon name="shield" size={18} />{tr('Owner controls · restrictions take effect immediately', '所有者控制 · 收紧权限立即生效')}</p>
               {r.paused ? (
-                <button type="button" className="btn btn-line w-full whitespace-nowrap" disabled={!owner || busy !== null || unpausePending} onClick={() => run('unpause', { type: 'queue', kind: 'Unpause', decoded: {} })}>
+                <button type="button" className="btn btn-line whitespace-nowrap" disabled={!owner || busy !== null || unpausePending} onClick={() => run('unpause', { type: 'queue', kind: 'Unpause', decoded: {} })}>
                   {unpausePending ? tr('Resume queued', '恢复已排队') : tr('Resume payments', '恢复付款')} <Tag kind="wait" text={waitText} />
                 </button>
               ) : (
-                <button type="button" className="btn btn-cinnabar w-full whitespace-nowrap" disabled={!owner || busy !== null} onClick={() => run('pause', { type: 'pause' })}>
+                <button type="button" className="btn btn-cinnabar whitespace-nowrap" disabled={!owner || busy !== null} onClick={() => run('pause', { type: 'pause' })}>
                   {tr('Pause all payments', '暂停所有付款')} <Tag kind="now" />
                 </button>
               )}
             </div>
           </section>
 
+          <Agents reg={r} owner={owner} busy={busy} run={run} waitText={waitText} />
+
           <Pending reg={r} symbol={symbol} canSend={signer.canSend} isOwner={owner} busy={busy} run={run} />
 
           <Vendors reg={r} owner={owner} busy={busy} run={run} waitText={waitText} />
           <Budgets reg={r} owner={owner} busy={busy} run={run} waitText={waitText} symbol={symbol} />
 
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid gap-6 lg:grid-cols-2">
             <DailyCap reg={r} owner={owner} busy={busy} run={run} waitText={waitText} symbol={symbol} />
-            <Agents reg={r} owner={owner} busy={busy} run={run} waitText={waitText} />
             <Withdraw reg={r} owner={owner} busy={busy} run={run} waitText={waitText} symbol={symbol} />
           </div>
         </div>
@@ -346,9 +349,9 @@ function Tag({ kind, text }: { kind: 'now' | 'wait'; text?: string }) {
 
 function Figure({ label, value, unit, color }: { label: string; value: string; unit?: string; color?: string }) {
   return (
-    <div className="border-rule p-4 [&:not(:first-child)]:border-t sm:[&:not(:first-child)]:border-l sm:[&:not(:first-child)]:border-t-0">
+    <div className="metric-card">
       <p className="text-sm text-ink2">{label}</p>
-      <p className="num cond-x mt-0.5 text-[2.2rem] font-bold leading-none" style={{ color: color ?? 'var(--ink)' }}>
+      <p className="num mt-6 text-[1.8rem] font-semibold leading-none" style={{ color: color ?? 'var(--ink)' }}>
         {value}
         {unit && <span className="ml-1 text-sm font-semibold">{unit}</span>}
       </p>
@@ -358,11 +361,11 @@ function Figure({ label, value, unit, color }: { label: string; value: string; u
 
 function Panel({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
   return (
-    <section className="ruled bg-field">
-      <div className="rule-b px-4 py-3">
+    <section className="ruled overflow-hidden bg-field">
+      <div className="panel-heading"><div>
         <h2 className="cond text-xl font-bold leading-tight">{title}</h2>
         {note && <p className="text-sm text-ink2">{note}</p>}
-      </div>
+      </div></div>
       {children}
     </section>
   )
@@ -574,7 +577,7 @@ function Budgets({ reg, owner, busy, run, waitText, symbol }: PanelProps & { sym
         </table>
       </div>
       <form
-        className="grid grid-cols-2 items-end gap-2 border-t border-rule bg-paper px-4 py-3 sm:grid-cols-[5.5rem_1fr_7rem_9.5rem_6rem_auto]"
+        className="grid grid-cols-2 items-end gap-2 border-t border-rule bg-paper px-4 py-3 xl:grid-cols-[5.5rem_minmax(0,1fr)_7rem_9.5rem_6rem_auto]"
         onSubmit={(e) => {
           e.preventDefault()
           if (!valid) return
@@ -648,31 +651,17 @@ function Agents({ reg, owner, busy, run, waitText }: PanelProps) {
   const [a, setA] = useState('')
   const agents = reg.agents ?? []
   return (
-    <Panel title={tr('Agent keys', 'Agent 密钥')}>
-      <ul className="divide-y divide-rule">
-        {agents.length === 0 && <li className="px-4 py-3 text-sm text-ink2">{tr('No agents listed.', '没有 Agent。')}</li>}
-        {agents.map((g) => (
-          <li key={g.address} className="flex items-center gap-2 px-4 py-2.5">
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold">{g.label === 'guarded' ? tr('Guarded', '带防护') : g.label === 'naive' ? tr('Naive', '裸奔') : String(g.label)}</span>
-              <Address value={g.address} lead={8} tail={6} className={g.active ? '' : 'line-through'} />
-              {(g.balance != null || g.gas) && (
-                <span className="block text-xs text-ink2">
-                  {g.balance != null && tr(`${fmtAmount(g.balance)} BOT`, `${fmtAmount(g.balance)} BOT`)}
-                  {g.balance != null && g.gas && tr(', ', '，')}
-                  {g.gas === 'sponsored' ? <span className="text-jade">{tr('gas paid by the BOT Chain paymaster', '手续费由 BOT Chain paymaster 代付')}</span> : g.gas === 'self' ? tr('pays its own gas', '自付手续费') : null}
-                </span>
-              )}
-            </span>
-            {g.active ? (
-              <button type="button" className="btn btn-cinnabar px-2 py-1 text-sm" disabled={!owner || busy !== null} onClick={() => run(`revoke-${g.address}`, { type: 'revokeAgent', agent: g.address })}>
-                {tr('Revoke', '撤销')} <Tag kind="now" />
-              </button>
-            ) : (
-              <span className="text-sm text-cinnabar">{tr('Revoked', '已撤销')}</span>
-            )}
-          </li>
-        ))}
+    <Panel title={tr('Agent wallets', 'Agent 钱包')} note={tr('Each agent has its own key. Both use the same vendor registry and shared vault limits.', '每个 Agent 有独立密钥，均受同一供应商登记表和金库共享限额约束。')}>
+      <ul className="grid gap-4 p-5 md:grid-cols-2">
+        {agents.length === 0 && <li className="text-sm text-ink2">{tr('No agents listed.', '没有 Agent。')}</li>}
+        {agents.map(g => <li key={g.address} className="rounded-box border border-rule bg-sheet p-5">
+          <div className="agent-summary"><span className={`agent-avatar ${g.label}`}><Icon name={g.label === 'guarded' ? 'shield' : 'agents'} /></span><div className="flex-1"><h3 className="text-sm font-semibold">{g.label === 'guarded' ? tr('Guarded agent', '带防护的 Agent') : g.label === 'naive' ? tr('Naive agent', '裸奔 Agent') : String(g.label)}</h3><span className="soft-tag mt-1">{g.active ? tr('Authorized key', '已授权密钥') : tr('Revoked', '已撤销')}</span></div></div>
+          <p className="mb-1 mt-5 text-xs text-ink2">{tr('Wallet address', '钱包地址')}</p>
+          <Address value={g.address} lead={10} tail={8} className={g.active ? '' : 'line-through'} />
+          <div className="mt-4 flex flex-wrap items-end justify-between gap-3 border-t border-rule pt-4"><div><p className="text-xs text-ink2">{tr('Gas balance', '手续费余额')}</p><p className="mt-1 font-mono text-sm">{g.balance != null ? `${fmtAmount(g.balance)} BOT` : '—'}</p><p className="mt-1 text-xs text-ink2">{g.gas === 'sponsored' ? tr('Sponsored gas (configured)', '配置为代付手续费') : g.gas === 'self' ? tr('Pays its own gas', '自付手续费') : tr('Gas mode unavailable', '手续费模式暂无数据')}</p></div>
+          {g.active && <button type="button" className="btn btn-cinnabar px-3 py-2 text-xs" disabled={!owner || busy !== null} onClick={() => run(`revoke-${g.address}`, { type: 'revokeAgent', agent: g.address })}>{tr('Revoke', '撤销')} <Tag kind="now" /></button>}</div>
+          {g.label === 'naive' && <p className="mt-4 text-xs text-ink2">{tr('Deliberately unguarded for comparison. The vault still enforces its rules.', '故意不设防以作对照，金库仍执行规则。')}</p>}
+        </li>)}
       </ul>
       <form
         className="flex gap-2 border-t border-rule bg-paper px-4 py-3"

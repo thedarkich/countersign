@@ -19,7 +19,7 @@ export default {
         sans: ['"Archivo Variable"', '"PingFang SC"', '"Noto Sans SC"', '"Microsoft YaHei"', 'system-ui', 'sans-serif'],
         mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
       },
-      borderRadius: { box: '3px' },
+      borderRadius: { box: '8px' },
     },
   },
   plugins: [],

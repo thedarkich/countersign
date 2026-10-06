@@ -7,6 +7,8 @@ import type { AgentKind, AppConfig, LedgerEvent, LedgerKind } from '../api/types
 import { useLang } from '../i18n'
 import type { Strings } from '../i18n/strings'
 import { Header } from '../components/Header'
+import { AgentActivity } from '../components/AgentActivity'
+import { Icon } from '../components/Icon'
 import { Counters } from '../components/Counters'
 import { BrandSeal, Seal, SealMark } from '../components/Seal'
 import { Address, EvalCard, TxLink } from '../components/bits'
@@ -68,13 +70,14 @@ function useArrivals(events: LedgerEvent[] | undefined) {
 }
 
 export default function LedgerPage() {
-  const { t } = useLang()
+  const { t, tr } = useLang()
   const [params, setParams] = useSearchParams()
   const stage = params.get('stage') === '1'
   const [kind, setKind] = useState<LedgerKind>('all')
 
   const config = useQuery({ queryKey: ['config'], queryFn: api.config, staleTime: 60_000 })
   const stats = useQuery({ queryKey: ['stats'], queryFn: api.stats, refetchInterval: 3000 })
+  const agentFeed = useQuery({ queryKey: ['ledger', 'all'], queryFn: () => api.ledger('all', 100), refetchInterval: 2500 })
   const evalq = useQuery({ queryKey: ['eval'], queryFn: api.evalResults, refetchInterval: 30_000 })
   // stage mode always watches everything; the table follows the filter tabs
   const ledger = useQuery({ queryKey: ['ledger', stage ? 'all' : kind], queryFn: () => api.ledger(stage ? 'all' : kind, 100), refetchInterval: 2500 })
@@ -113,9 +116,9 @@ export default function LedgerPage() {
   if (stage) return <Stage config={config.data} stats={stats.data} events={ledger.data} evalData={evalq.data} qr={qr} onExit={() => setStage(false)} />
 
   return (
-    <div className="min-h-dvh">
+    <div className="workspace">
       <Header />
-      <main className="mx-auto max-w-6xl px-4 pb-16 pt-6 lg:pt-8">
+      <main tabIndex={-1} className="page-content ">
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
           <div>
             <h1 className="cond text-[2.4rem] font-extrabold leading-tight sm:text-[2.9rem]">{t.ledger_title}</h1>
@@ -124,24 +127,18 @@ export default function LedgerPage() {
           {config.data && <ContractLine config={config.data} />}
         </div>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_17rem]">
-          <div className="min-w-0 space-y-5">
-            <div>
-              <Counters stats={stats.data?.outside} symbol={symbol} />
-              <p className="mt-2 text-sm text-ink2">
-                <span className="font-semibold text-jade">{t.c_lost}</span>: {t.money_lost_note}.
-                {stats.data && stats.data.seed.attempts > 0 && <> {t.c_seed_note.replace('{n}', String(stats.data.seed.attempts))}</>}
-              </p>
-            </div>
-            <EvalCard data={evalq.data} />
-          </div>
-          <div className="order-first lg:order-none">
-            <QrCard url={qr} />
-          </div>
+        <div className="mt-7">
+          <Counters stats={stats.data?.outside} symbol={symbol} />
+          <p className="mt-3 text-xs text-ink2">{t.c_lost}: {t.money_lost_note}. {stats.data && stats.data.seed.attempts > 0 && t.c_seed_note.replace('{n}', String(stats.data.seed.attempts))}</p>
         </div>
+        <div className="mt-7 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
+          <AgentActivity config={config.data} events={agentFeed.data} />
+          <aside className="grid gap-5 sm:grid-cols-2 xl:grid-cols-1"><QrCard url={qr} /><EvalCard data={evalq.data} /></aside>
+        </div>
+        <div className="mb-4 mt-9 flex items-center gap-2"><Icon name="activity" size={19} /><h2 className="text-lg font-semibold">{tr('Recent activity', '最近记录')}</h2></div>
 
-        <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex gap-1" role="tablist" aria-label={t.ledger_title}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="tab-scroll flex gap-1" role="tablist" aria-label={t.ledger_title}>
             {(
               [
                 ['all', t.filter_all],
@@ -202,13 +199,12 @@ function QrCard({ url, big = false, qrSize }: { url: string; big?: boolean; qrSi
       </section>
     )
   return (
-    <section className="flex items-center gap-4 ruled bg-field p-4 lg:block">
-      <div className="w-fit shrink-0 bg-[#fff] p-2 ruled lg:mx-auto">
-        <QRCodeSVG value={url} size={104} bgColor="#ffffff" fgColor="#1d2836" level="M" marginSize={0} className="lg:hidden" />
-        <QRCodeSVG value={url} size={176} bgColor="#ffffff" fgColor="#1d2836" level="M" marginSize={0} className="hidden lg:block" />
+    <section className="flex items-center gap-4 ruled bg-field p-4">
+      <div className="w-fit shrink-0 bg-[#fff] p-2 ruled">
+        <QRCodeSVG value={url} size={104} bgColor="#ffffff" fgColor="#1d2836" level="M" marginSize={0} />
       </div>
-      <div className="lg:mt-3 lg:text-center">
-        <p className="cond keep text-xl font-bold leading-tight">{t.scan_to_try}</p>
+      <div className="min-w-0">
+        <p className="keep text-base font-semibold leading-tight">{t.scan_to_try}</p>
         <p className="mt-1 break-all font-mono text-xs text-ink2">{shown}</p>
       </div>
     </section>
@@ -230,8 +226,8 @@ function EventsTable({ events, loading, symbol, netOf }: { events?: LedgerEvent[
   return (
     <>
       {/* desktop: a ruled ledger page */}
-      <div className="mt-3 hidden overflow-hidden ruled bg-field md:block">
-        <table className="w-full border-collapse text-left text-[0.95rem]">
+      <div className="mt-3 hidden overflow-x-auto ruled bg-field md:block">
+        <table className="w-full min-w-[760px] border-collapse text-left text-[0.95rem]">
           <thead>
             <tr className="rule-b bg-paper text-[0.85rem] text-rule2">
               <th className="w-[6.5rem] px-3 py-2 font-normal">{t.col_time}</th>
@@ -365,6 +361,7 @@ function Stage({
         <div className="flex items-center gap-3 px-8 py-3">
           <BrandSeal size={40} />
           <span className="cond text-[1.7rem] font-bold leading-none">Countersign</span>
+          {api.mode === 'mock' && <span className="mock-pill">{t.mock_badge}</span>}
           <span className="ml-3 text-lg text-ink2">{t.tagline}</span>
           <div className="ml-auto flex items-center gap-2">
             <LangSwitch size="lg" />

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, AuthError, clearAdminToken } from '../api/client'
 import type { AgentKind, Attempt, BatchSummary, DemoInvoice, Source } from '../api/types'
 import { useLang } from '../i18n'
+import { Icon } from '../components/Icon'
 import { Header } from '../components/Header'
 import { Seal, SealMark } from '../components/Seal'
 import { StepRow } from '../components/StepRow'
@@ -26,7 +27,7 @@ async function sendTo(target: Target, what: { file?: File; demo?: string }) {
 
 export default function InboxPage() {
   return (
-    <div className="min-h-dvh">
+    <div className="workspace">
       <Header />
       <AdminGate>
         <Inbox />
@@ -40,6 +41,7 @@ function Inbox() {
   const qc = useQueryClient()
   const [target, setTarget] = useState<Target>('both')
   const [source, setSource] = useState<Source | 'all'>('all')
+  const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
   const [pair, setPair] = useState<Pair | null>(null)
   const [batchId, setBatchId] = useState<string | null>(null)
@@ -87,17 +89,27 @@ function Inbox() {
   }
 
   const attempts = list.data ?? []
+  const shown = attempts.filter(a => [a.file_name, a.extraction?.invoice_number, a.proposal?.vendor_name, a.agent].some(value => value?.toLowerCase().includes(search.toLowerCase())))
   const current = attempts.find((a) => a.id === selected) ?? null
 
   return (
-    <main className="mx-auto max-w-7xl px-4 pb-16 pt-6">
+    <main tabIndex={-1} className="page-content ">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="cond text-[2.4rem] font-extrabold leading-tight">{tr('Inbox', '收件箱')}</h1>
+          <p className="mt-2 text-sm text-ink2">{tr('Read an invoice. Compare the agents. Follow every decision.', '读取发票，对照 Agent，追踪每一步决定。')}</p>
         </div>
         <AgentSwitch value={target} onChange={setTarget} />
       </div>
 
+      <dl className="metric-grid mt-7">
+        {[
+          { label: tr('Invoices in view', '当前发票'), value: attempts.length, icon: 'inbox' as const },
+          { label: tr('Paid', '已支付'), value: attempts.filter(a => a.outcome === 'paid').length, icon: 'check' as const },
+          { label: tr('Needs review', '需要检查'), value: attempts.filter(a => ['refused', 'blocked', 'error'].includes(a.outcome ?? '')).length, icon: 'flag' as const },
+          { label: tr('Processing', '处理中'), value: attempts.filter(a => !isDone(a)).length, icon: 'activity' as const },
+        ].map(x => <div className="metric-card" key={x.label}><dt>{x.label}<Icon name={x.icon} size={17} /></dt><dd>{list.isLoading ? '—' : x.value}</dd></div>)}
+      </dl>
       <DemoShelf target={target} onSent={onSent} />
 
       <div className="mt-4 grid gap-4 md:grid-cols-[1fr_20rem]">
@@ -115,7 +127,7 @@ function Inbox() {
       {pair && <Compare pair={pair} attempts={attempts} onOpen={setSelected} onClose={() => setPair(null)} />}
 
       <div className="mt-8 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1" role="tablist" aria-label={tr('Source', '来源')}>
+        <div className="tab-scroll flex gap-1" role="tablist" aria-label={tr('Source', '来源')}>
           {(
             [
               ['all', tr('All', '全部')],
@@ -130,11 +142,11 @@ function Inbox() {
             </button>
           ))}
         </div>
-        <span className="text-sm text-ink2">{tr(`${attempts.length} attempts`, `共 ${attempts.length} 条`)}</span>
+        <label className="flex w-full items-center gap-2 rounded-box border border-rule bg-field px-3 py-2 sm:w-64"><Icon name="search" size={16} className="text-ink2" /><input className="min-w-0 w-full bg-transparent text-sm" aria-label={tr('Search invoices', '搜索发票')} placeholder={tr('Search invoices…', '搜索发票…')} value={search} onChange={e => setSearch(e.target.value)} /></label>
       </div>
 
       <div className={`mt-3 grid gap-5 ${current ? 'lg:grid-cols-[minmax(0,1fr)_34rem]' : ''}`}>
-        <AttemptsTable attempts={attempts} loading={list.isLoading} selected={selected} onSelect={setSelected} symbol={symbol} compact={!!current} />
+        <AttemptsTable attempts={search ? shown : attempts} loading={list.isLoading} selected={selected} onSelect={setSelected} symbol={symbol} compact={!!current} />
         {current && <Drawer attempt={current} symbol={symbol} onClose={() => setSelected(null)} />}
       </div>
     </main>
@@ -190,8 +202,8 @@ function DemoShelf({ target, onSent }: { target: Target; onSent: OnSent }) {
 
   return (
     <section className="mt-5" aria-label={tr('Demo invoices', '演示发票')}>
-      <h2 className="cond mb-2 text-xl font-bold">{tr('Demo invoices', '演示发票')}</h2>
-      <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+      <h2 className="mb-3 mt-7 text-base font-semibold">{tr('Try a demo scenario', '试试演示场景')}</h2>
+      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {q.data.map((p) => (
           <li key={p.name}>
             <button
