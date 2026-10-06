@@ -378,7 +378,7 @@ See `.env.example` for every variable.
   - parse with Pydantic, retry once on a parse error, time out after 30 s
   - a model-specific failure may use the authorized same-gateway alternative only when paid retries/fallbacks are permitted; authentication, balance, rate-limit and gateway failures must not trigger a cascade of paid requests. Use direct DeepSeek for gateway failure only if independently configured. Otherwise surface the error.
 - Hourly call cap: when `LLM_HOURLY_CALL_CAP` is exceeded, the API returns 503 with a bilingual message.
-- **Current human budget override:** about $2 in the account, small tests only. Use mocks for development, cap real test outputs, and disable automatic paid retries/fallbacks in setup probes. No public bounty AI traffic, repeated real-model polling or paid batch/evaluation run is authorized by this balance. The saved hourly limit is 20 for future backend enforcement, not a provider-side dollar cap; the backend does not exist yet. Revisit the funded usage allowance before enabling live traffic. This overrides the planned retry/batch behavior while the tests-only restriction remains.
+- **Current human budget override:** about $2 in the account, small tests only. Use mocks for development, cap real test outputs, and disable automatic paid retries/fallbacks in setup probes. No public bounty AI traffic, repeated real-model polling or paid batch/evaluation run is authorized by this balance. The saved hourly limit is 20 for future backend enforcement, not a provider-side dollar cap; the backend now enforces this ceiling per process, with paid calls disabled by default. Revisit the funded usage allowance before enabling live traffic. This overrides the planned retry/batch behavior while the tests-only restriction remains.
 
 ### 3.5 Pipeline (`pipeline/runner.py`)
 
@@ -775,7 +775,7 @@ npm run abi                  # after forge build: regenerate src/abi/Countersign
 3. How it works (the diagram from PRODUCT.md, as an image or ASCII)
 4. Contract addresses with explorer links, for testnet and mainnet, plus links to example Paid, Blocked and time-locked change transactions
 5. Run locally, and tests
-6. **Built during the event:** generated from `git log --since="2026-10-06 20:00 +0800"`
+6. **Built after the human-authorized start:** show actual timestamps and `git log 87135b1..HEAD` (the supplied frontend baseline). Disclose the earlier start authorization; do not omit earlier implementation with the old 20:00 filter.
 7. **Pre-existing and reused:** OpenZeppelin, libraries, any `data/invoices/premade/` files, and anything the team brought
 8. Bounty results (outside vs. seed) and eval results
 9. Team, license (MIT)

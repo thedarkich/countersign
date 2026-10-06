@@ -1,0 +1,47 @@
+"""Runtime configuration; never log or expose the complete settings object."""
+
+from pathlib import Path
+from typing import Literal
+
+from pydantic import Field, SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=ROOT / ".env",
+        env_file_encoding="utf-8",
+        env_ignore_empty=True,
+        extra="ignore",
+        hide_input_in_errors=True,
+    )
+
+    network: Literal["testnet", "mainnet"] = "testnet"
+    bounty_network: Literal["testnet", "mainnet"] = "testnet"
+    botchain_mainnet_rpc: str = "https://rpc.botchain.ai"
+    botchain_testnet_rpc: str = "https://rpc.bohr.life"
+    explorer_url_mainnet: str = "https://scan.botchain.ai"
+    explorer_url_testnet: str = "https://scan.bohr.life"
+    contract_address_mainnet: str = ""
+    contract_address_testnet: str = ""
+    agent_guarded_address: str = ""
+    agent_naive_address: str = ""
+    agent_guarded_pk: SecretStr = Field(default=SecretStr(""), repr=False)
+    agent_naive_pk: SecretStr = Field(default=SecretStr(""), repr=False)
+    tokenrouter_api_key: SecretStr = Field(default=SecretStr(""), repr=False)
+    tokenrouter_base_url: Literal["https://api.tokenrouter.com/v1"] = (
+        "https://api.tokenrouter.com/v1"
+    )
+    tokenrouter_text_model: str = "qwen/qwen3.8-flash"
+    tokenrouter_vision_model: str = "qwen/qwen3.8-flash"
+    guard_version: Literal["v1", "v2"] = "v1"
+    transactions_enabled: bool = False
+    llm_enabled: bool = False
+    llm_hourly_call_cap: int = Field(default=20, ge=1, le=1000)
+    llm_max_output_tokens: int = Field(default=1024, ge=1, le=2048)
+    admin_token: SecretStr = Field(default=SecretStr(""), repr=False)
+    ip_hash_salt: SecretStr = Field(default=SecretStr(""), repr=False)
+    public_base_url: str = "http://localhost:8000"
+    data_dir: Path = ROOT / "data"

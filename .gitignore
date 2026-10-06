@@ -20,3 +20,5 @@ data/previews/
 backend/.pytest_cache/
 backend/.ruff_cache/
 output/
+
+.wallet-setup-*

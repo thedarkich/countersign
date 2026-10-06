@@ -1,3 +1,14 @@
+# Private signing-key helper
+
+The wallet extension blocks browser automation. Codex can save and validate exports, but cannot read them from MetaMask. In your own Ubuntu terminal, run:
+
+```bash
+cd ~/countersign
+backend/.venv/bin/python scripts/configure_wallets.py
+```
+
+Paste each named account’s exported private key into its hidden prompt. The helper checks all four public addresses before atomically updating the ignored .env with mode 600. The installed backend environment already provides its dependencies. The helper makes no network requests. Do not use chat for this. Do not export the mainnet owner. Cancel with Ctrl+C to save nothing.
+
 # Remaining private wallet setup
 
 On 2026-10-06 the human authorized Codex to finish setup directly. Codex saved the public settings, populated the authorized TokenRouter credential when no local credential was available, generated missing app credentials privately, and verified both selected Qwen models. Local configuration remains mode 0600 and Git-ignored; its contents were not displayed. HTTPS also passed at `https://139-180-194-19.sslip.io/`.
@@ -62,7 +73,7 @@ The mainnet owner (`Account 1`, ending `e0c4`) stays in MetaMask or an encrypted
 
 ## 4. AI access is working; credential rotation and fallback remain
 
-The latest user-supplied replacement TokenRouter key is saved locally. Tiny text probes passed for Qwen Max, Qwen Flash and DeepSeek v4.1 Flash. The requested experimental DeepSeek vision route returned HTTP 401 and is disabled; one authenticated model-list check confirmed its ID is listed, but did not establish execution access. No paid retry was made. The user reports about $2 in the account and authorizes small tests only. Qwen Flash is now the routine choice and Max is reserved for selective comparisons. The hourly cap of 20 is a future backend setting, not a verified provider-side spending cap. No account-level revocation of older keys was performed. Exact evidence and estimated cost are recorded in PHASE0_REPORT.md.
+The latest user-supplied replacement TokenRouter key is saved locally. Tiny text probes passed for Qwen Max, Qwen Flash and DeepSeek v4.1 Flash. The requested experimental DeepSeek vision route returned HTTP 401 and is disabled; one authenticated model-list check confirmed its ID is listed, but did not establish execution access. No paid retry was made. The user reports about $2 in the account and authorizes small tests only. Qwen Flash is now the routine choice and Max is reserved for selective comparisons. The backend now enforces a process-local hourly cap of 20; this is not a provider-side dollar spending cap. Paid requests default to disabled. No account-level revocation of older keys was performed. Exact evidence and estimated cost are recorded in PHASE0_REPORT.md.
 
 DeepSeek v4.1 Flash is already available through the same TokenRouter key; another account is not required for the authorized tests. A direct DeepSeek account would be an optional independent gateway-outage fallback. Leave its separate `DEEPSEEK_API_KEY` empty until separately provided; do not copy the TokenRouter key into direct-provider fields.
 
