@@ -1,0 +1,13 @@
+# Codex settings for this repo. Codex applies a project .codex/config.toml only after you trust the folder.
+# Restart Codex after editing.
+
+approval_policy = "on-request"     # Codex asks before anything outside the sandbox
+sandbox_mode = "workspace-write"   # it may edit files inside the repo
+
+[sandbox_workspace_write]
+network_access = true              # forge install, npm, uv and BOT Chain RPC calls need the network
+
+# Current library docs (wagmi, viem, FastAPI, web3.py, PyMuPDF, Foundry)
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]

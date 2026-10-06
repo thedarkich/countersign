@@ -1,0 +1,278 @@
+@import '@fontsource-variable/archivo/wdth.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Countersign visual system: a Chinese invoice (发票) and its seal.
+  Light: pale celadon security paper, blue-black ballpoint ink, red-brown ruling.
+  Dark: the same sheet at night, ink turned pale and the seals brightened to keep contrast.
+  Only two seal inks carry meaning in either theme: cinnabar for blocked, jade for paid.
+  The theme follows the system unless <html data-theme> says otherwise.
+*/
+:root {
+  --paper: #eef2ed;
+  --paper-2: #e2e9e1;
+  --field: #f8faf6;
+  --sheet: #ffffff;
+  --ink: #1d2836;
+  --ink-2: #566170;
+  --ink-hover: #2c3a4d;
+  --ink-off: #8a93a0;
+  --rule: #c49a8f;
+  --rule-strong: #8e4a3f;
+  --cinnabar: #cf2a1f;
+  --cinnabar-wash: #f6e3e0;
+  --jade: #1b7454;
+  --row-new: #f3e2dc;
+  --wave-1: #b9c7b8;
+  --shadow: rgba(29, 40, 54, 0.12);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper: #0f151b;
+    --paper-2: #1a222b;
+    --field: #151c24;
+    --sheet: #1d2731;
+    --ink: #e4eae3;
+    --ink-2: #9aa5ae;
+    --ink-hover: #ffffff;
+    --ink-off: #4d5862;
+    --rule: #5a4541;
+    --rule-strong: #a56a5d;
+    --cinnabar: #f0594b;
+    --cinnabar-wash: #3a211f;
+    --jade: #4fb98c;
+    --row-new: #3b2522;
+    --wave-1: #26313b;
+    --shadow: rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --paper: #0f151b;
+  --paper-2: #1a222b;
+  --field: #151c24;
+  --sheet: #1d2731;
+  --ink: #e4eae3;
+  --ink-2: #9aa5ae;
+  --ink-hover: #ffffff;
+  --ink-off: #4d5862;
+  --rule: #5a4541;
+  --rule-strong: #a56a5d;
+  --cinnabar: #f0594b;
+  --cinnabar-wash: #3a211f;
+  --jade: #4fb98c;
+  --row-new: #3b2522;
+  --wave-1: #26313b;
+  --shadow: rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+
+html {
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-text-size-adjust: 100%;
+}
+::placeholder {
+  color: var(--ink-2);
+  opacity: 0.75;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--paper);
+  font-family: 'Archivo Variable', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+  font-variation-settings: 'wdth' 100;
+  font-size: 16px;
+  line-height: 1.55;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Condensed Archivo is the voice of headings, numerals and seals. */
+.cond {
+  font-variation-settings: 'wdth' 72;
+  letter-spacing: -0.01em;
+  word-spacing: 0.06em;
+}
+.cond-x {
+  font-variation-settings: 'wdth' 62;
+  letter-spacing: -0.02em;
+  word-spacing: 0.06em;
+}
+/* Chinese headings break at punctuation, not inside a word like 或者 */
+.keep {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Invoice ruling: boxed fields like a 发票 grid */
+.ruled {
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}
+.ruled-strong {
+  border: 1.5px solid var(--rule-strong);
+  border-radius: 3px;
+}
+.rule-b {
+  border-bottom: 1px solid var(--rule);
+}
+.rule-t {
+  border-top: 1px solid var(--rule);
+}
+
+/* Fine guilloche band used once, at the top of each page, like security paper */
+.guilloche {
+  background-color: var(--paper-2);
+  position: relative;
+  isolation: isolate;
+}
+/* the wave pattern is drawn with a mask so its colour comes from the theme */
+.guilloche::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--wave-1);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='40' viewBox='0 0 120 40'%3E%3Cg fill='none' stroke='%23000'%3E%3Cpath d='M0 20 Q15 2 30 20 T60 20 T90 20 T120 20' stroke-width='0.7'/%3E%3Cpath d='M0 20 Q15 38 30 20 T60 20 T90 20 T120 20' stroke-width='0.7'/%3E%3Cpath d='M0 14 Q15 -2 30 14 T60 14 T90 14 T120 14' stroke-width='0.5' opacity='0.7'/%3E%3Cpath d='M0 26 Q15 42 30 26 T60 26 T90 26 T120 26' stroke-width='0.5' opacity='0.7'/%3E%3C/g%3E%3C/svg%3E") repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='40' viewBox='0 0 120 40'%3E%3Cg fill='none' stroke='%23000'%3E%3Cpath d='M0 20 Q15 2 30 20 T60 20 T90 20 T120 20' stroke-width='0.7'/%3E%3Cpath d='M0 20 Q15 38 30 20 T60 20 T90 20 T120 20' stroke-width='0.7'/%3E%3Cpath d='M0 14 Q15 -2 30 14 T60 14 T90 14 T120 14' stroke-width='0.5' opacity='0.7'/%3E%3Cpath d='M0 26 Q15 42 30 26 T60 26 T90 26 T120 26' stroke-width='0.5' opacity='0.7'/%3E%3C/g%3E%3C/svg%3E") repeat;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.field {
+  background: var(--field);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 0.6rem 0.75rem;
+  width: 100%;
+}
+.field:focus {
+  outline: none;
+  border-color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 3px;
+  padding: 0.65rem 1.1rem;
+  font-weight: 600;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.btn-ink {
+  background: var(--ink);
+  color: var(--field);
+}
+.btn-ink:hover {
+  background: var(--ink-hover);
+}
+.btn-ink:disabled {
+  background: var(--ink-off);
+  cursor: not-allowed;
+}
+.btn-line {
+  border: 1px solid var(--ink);
+  background: transparent;
+}
+.btn-line:hover {
+  background: var(--paper-2);
+}
+.btn-cinnabar {
+  border: 1px solid var(--cinnabar);
+  color: var(--cinnabar);
+  background: transparent;
+}
+.btn-cinnabar:hover {
+  background: var(--cinnabar-wash);
+}
+.btn-line:disabled,
+.btn-cinnabar:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  background: transparent;
+}
+
+/* The one bold moment: a seal stamping down onto the outcome */
+@keyframes stamp {
+  0% {
+    transform: scale(1.9) rotate(var(--seal-rot, -8deg));
+    opacity: 0;
+  }
+  55% {
+    transform: scale(0.94) rotate(var(--seal-rot, -8deg));
+    opacity: 1;
+  }
+  75% {
+    transform: scale(1.03) rotate(var(--seal-rot, -8deg));
+  }
+  100% {
+    transform: scale(1) rotate(var(--seal-rot, -8deg));
+    opacity: 0.92;
+  }
+}
+.seal-stamp {
+  animation: stamp 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes blink-step {
+  50% {
+    opacity: 0.35;
+  }
+}
+.step-live {
+  animation: blink-step 1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seal-stamp,
+  .step-live {
+    animation: none;
+  }
+  .seal-stamp {
+    transform: rotate(var(--seal-rot, -8deg));
+    opacity: 0.92;
+  }
+}
+
+/* a new ledger row arriving on the stage screen */
+@keyframes row-in {
+  0% {
+    background-color: var(--row-new);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.row-new {
+  animation: row-in 2.4s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .row-new {
+    animation: none;
+  }
+}
