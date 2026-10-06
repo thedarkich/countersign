@@ -6,7 +6,7 @@ Codex keeps this file current. Newest entries at the top of each section.
 
 | Phase | State | Acceptance result |
 |---|---|---|
-| 0 Environment | public configuration, AI routes, all four signing keys, test funds and HTTPS checked; mainnet funding/organizer answers pending | Human ran the private helper; all identities matched. Runtime testnet deployment/setup/proof confirmed the four signers. No keys displayed; .env remains ignored with mode 0600. Latest AI route checks and tests-only budget remain unchanged. GitHub deferred. |
+| 0 Environment | public configuration, AI routes, all four signing keys, test funds and HTTPS checked; mainnet funding/organizer answers pending | Human ran the private helper; all identities matched. Runtime testnet deployment/setup/proof confirmed the four signers. No keys displayed; .env remains ignored with mode 0600. Latest AI route checks and tests-only budget remain unchanged. Private GitHub upload now authorized; authentication pending. |
 | 1 Contract | testnet deployed, source verified and live proof passed; mainnet pending | 92 local tests pass, including the expanded operations rehearsal. Verified testnet vault, 8 delayed setup changes, 20 tUSDT funding and real Paid/PayoutMismatch/OverBudget/DuplicateInvoice receipts. Vault holds 19.9 tUSDT after the 0.1 proof payment. Mainnet owner/deployer/agents each have 0 BOT; no mainnet deployment or phase-completion tag. |
 | 2 Pipeline | local workflow and chain adapter tested; live acceptance pending | 57 unit/workflow tests and 7 isolated Anvil integration tests pass. Full local flow with mocked AI: clean guarded invoice Paid; redirected naive proposal Blocked/PayoutMismatch. SQLite persistence, bounded model transport, legacy signing, nonce handling and receipt decoding implemented. CLI/dataset, indexer recovery/backfill/caches, API and real-model/funded-network acceptance remain. No paid AI calls or public-chain transactions in this build. |
 | 3 Bounty live | not started | |
@@ -14,6 +14,10 @@ Codex keeps this file current. Newest entries at the top of each section.
 | 5 Learning loop | not started | |
 | 6 Public Good lane | not started | |
 | 7 Submit | not started | |
+
+## GitHub handoff — 2026-10-06
+
+The human requested a private repository and supplied collaborators `yihao0220` and `Giselle-An`. Added a team README with mock preview instructions, verified testnet links, current implementation limits and provenance. Checked all five existing commits (222 unique blobs): no private environment/keystore/database/upload paths are tracked, no provider-token or private-key patterns were found, and the two generic credential matches are explicit synthetic test fixtures. Local runtime secrets were not opened. Upload and invitations await GitHub authentication; no remote has been created yet.
 
 ## Latest frontend work — 2026-10-06
 
@@ -123,7 +127,7 @@ Only public addresses belong in this table. The human retains the owner key and 
 - Replacement-key Qwen Max/Flash and DeepSeek Flash text access works; use Flash for routine tests, mocks for development and Max selectively. Experimental DeepSeek vision is disabled after 401. Do not rerun completed probes or launch paid batches/public traffic under the small-tests-only $2 allowance. Independent-provider fallback is optional future work; current model alternatives all depend on TokenRouter. Old-key revocation remains unverified.
 - Before the real deployment, replace the temporary TLS connection-test container with the app route, preserving the named Caddy certificate volumes. Laptop HTTPS/certificate checks now pass at `https://139-180-194-19.sslip.io/`; raw-IP HTTP still works. Retest the final application from phones/WeChat before launch.
 - Obtain organizer approval and BOT Chain's sponsorship, mainnet-bounty and gas-allocation answers; keep documented defaults until confirmed.
-- GitHub creation/remote setup is deferred by the human; do not treat it as a blocker to local work. Ubuntu Codex is installed; its personal sign-in and project-session trust/activation are human handoff items. Standalone Context7 documentation access already passed.
+- The human now requested a private GitHub upload and collaborator invitations for yihao0220 and Giselle-An; authentication is pending. This supersedes the earlier deferral. Ubuntu Codex is installed; its personal sign-in and project-session trust/activation are human handoff items. Standalone Context7 documentation access already passed.
 
 ## Execution plan
 
@@ -134,7 +138,7 @@ All times below are China time (UTC+8), from the original SPEC section 1 plan. T
 | 0A, replacement key and three routes verified | Keep tests tiny; resolve experimental vision access before any future retry; evaluate real fixtures only within authorized spend | Qwen Flash default; Max selective; DeepSeek Flash alternate, same gateway. Human reports $2 balance, tests only | Three text routes pass, earlier Qwen image probes pass, experimental vision 401 recorded; exact usage in PHASE0_REPORT.md |
 | 0B, signing keys and testnet proof ready | Mainnet configuration/funding | All four runtime identities confirmed by the human helper and live testnet signing. Mainnet owner remains human-controlled. | Testnet deployment/receipts below; mainnet gas/demo funds and owner actions still required |
 | 0C, server and HTTPS checked | Route the real app and retest final phones/WeChat; preserve existing certificate volumes | Codex completed HTTPS on the connection-test page; human retests the final app | `https://139-180-194-19.sslip.io/` HTTP 200, valid TLS/SAN; raw-IP HTTP still works |
-| 0D, tools/provenance ready; human handoff pending | Codex CLI installed; standalone Context7 checks and baseline comparison passed; docs reconciled. GitHub deferred by human | Human handles CLI sign-in/project trust and venue connectivity when using that session; local work continues without a remote | Codex 0.160.1, Context7 4.1.1 search/retrieval, 40/40 supplied frontend files matched before coding; local implementation commits now exist |
+| 0D, tools/provenance ready; human handoff pending | Codex CLI installed; standalone Context7 checks and baseline comparison passed; docs reconciled. Private GitHub upload now authorized; sign-in pending | Human handles CLI sign-in/project trust and venue connectivity when using that session; local work continues without a remote | Codex 0.160.1, Context7 4.1.1 search/retrieval, 40/40 supplied frontend files matched before coding; local implementation commits now exist |
 | 1, Oct 6 20:00 to Oct 7 00:30 | Vault contract, unit/fuzz/invariant tests, security and token review, testnet proof, then mainnet deployment | Codex; needs 0B for deployments. Human runs all mainnet owner-signing actions | Green tests; deployed addresses; real Paid, PayoutMismatch, OverBudget, DuplicateInvoice and time-lock evidence |
 | 2, Oct 7 07:00–10:00 | Backend/DB, invoice generation, extraction, hidden-text/matching checks, guard v1, both agents, transaction writer and indexing; preserve identity/model/scenario metadata for reputation | Codex; needs AI access and contract ABI/addresses | Clean guarded invoice paid; poisoned naive invoice blocked on-chain; targeted backend tests pass |
 | 3, Oct 7 10:00–12:00 | Public API, upload validation, auth/rate limits, VPS deployment, live Bounty wiring | Codex; needs 0C, pipeline, and explicit organizer approval to launch | Real phone submits in WeChat; counters update within 5 seconds |
@@ -165,7 +169,7 @@ All times below are China time (UTC+8), from the original SPEC section 1 plan. T
 - [x] Complete private runtime wallet configuration; all four identities verified and used on testnet.
 - [ ] Complete mainnet configuration/funding and human owner signatures.
 - [ ] Ask organizers: Is the public bounty allowed? May its attempts use mainnet? Is agent gas sponsorship available, for which endpoint/policy? How is mainnet gas allocated?
-- [ ] GitHub repository creation and remote: explicitly deferred by the human; revisit later.
+- [ ] Create/push private GitHub repository and invite yihao0220 and Giselle-An; human authorization received, GitHub sign-in pending.
 - [ ] Choose team roles and non-crypto prizes before launch/submission.
 - [x] Confirm the Phase 0 connection page opens; human reported PASS after the mobile-data/WeChat request.
 - [x] Codex configured and verified HTTPS for the connection-test page, with persistent certificate volumes and HTTP rollback retained.
