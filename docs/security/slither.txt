@@ -1,0 +1,47 @@
+
+Detector: divide-before-multiply
+Countersign._rollPeriod(Countersign.PO) (src/Countersign.sol#318-326) performs a multiplication on the result of a division:
+	- po.periodStart = uint64(uint256(po.periodStart) + (elapsed / period) * period) (src/Countersign.sol#323)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#divide-before-multiply
+
+Detector: timestamp
+Countersign.queueAddPO(uint256,uint256,uint256,uint64,uint32) (src/Countersign.sol#142-152) uses timestamp for comparisons
+	Dangerous comparisons:
+	- cap == 0 || expiry < block.timestamp (src/Countersign.sol#148)
+Countersign._queue(Countersign.Kind,bytes) (src/Countersign.sol#175-182) uses timestamp for comparisons
+	Dangerous comparisons:
+	- eta > type()(uint64).max (src/Countersign.sol#177)
+Countersign.execute(bytes32) (src/Countersign.sol#184-228) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp < change.eta (src/Countersign.sol#187)
+	- cap == 0 || expiry < block.timestamp (src/Countersign.sol#207)
+Countersign.pay(uint256,address,uint256,uint256,bytes32) (src/Countersign.sol#269-294) uses timestamp for comparisons
+	Dangerous comparisons:
+	- today > currentDay (src/Countersign.sol#276)
+Countersign._reason(uint256,address,Countersign.PO,uint256,bytes32) (src/Countersign.sol#296-316) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp > po.expiry (src/Countersign.sol#309)
+Countersign._rollPeriod(Countersign.PO) (src/Countersign.sol#318-326) uses timestamp for comparisons
+	Dangerous comparisons:
+	- elapsed >= period (src/Countersign.sol#322)
+Countersign.poRemaining(uint256) (src/Countersign.sol#349-356) uses timestamp for comparisons
+	Dangerous comparisons:
+	- ! po.exists || po.closed || block.timestamp > po.expiry (src/Countersign.sol#351)
+	- po.periodDays > 0 && block.timestamp - po.periodStart >= uint256(po.periodDays) * 86400 (src/Countersign.sol#352)
+Countersign.remainingToday() (src/Countersign.sol#358-361) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp / 86400 > currentDay (src/Countersign.sol#359)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#block-timestamp
+
+Detector: cyclomatic-complexity
+Countersign.execute(bytes32) (src/Countersign.sol#184-228) has a high cyclomatic complexity (17).
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#cyclomatic-complexity
+
+Detector: low-level-calls
+Low level call in Countersign._transfer(address,uint256) (src/Countersign.sol#328-335):
+	- (success,None) = address(recipient).call{value: amount}() (src/Countersign.sol#330)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#low-level-calls
+. analyzed (10 contracts with 102 detectors), 11 result(s) found
+'forge clean' running (wd: /home/darkhan/countersign/contracts)
+'forge config --json' running
+'forge build --build-info --deny never --skip ./test/** ./script/** --force' running (wd: /home/darkhan/countersign/contracts)

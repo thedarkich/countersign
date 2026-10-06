@@ -1,0 +1,14 @@
+digraph Auth {
+ rankdir=LR;
+ owner [label="Owner"];
+ queue [label="Queue / cancel delayed changes"];
+ instant [label="Pause / deactivate / close / revoke / lower cap"];
+ pending [label="Pending owner"];
+ ownership [label="Accept ownership"];
+ agent [label="Registered agent"];
+ payment [label="pay: budget + payout + invoice + daily rules"];
+ public [label="Anyone"];
+ execute [label="execute: ETA + preconditions + single use"];
+ owner -> queue; owner -> instant; pending -> ownership;
+ agent -> payment; public -> execute;
+}

@@ -1,0 +1,9 @@
+Compiling 31 files with Solc 0.8.24
+Solc 0.8.24 finished in 775.80ms
+Compiler run successful!
+
+Ran 1 test for fork/TestnetUSDT.t.sol:TestnetUSDTForkTest
+[PASS] testRealTestnetTokenPaidFlow() (gas: 2977086)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 8.71s (8.71s CPU time)
+
+Ran 1 test suite in 8.72s (8.71s CPU time): 1 tests passed, 0 failed, 0 skipped (1 total tests)

@@ -1,0 +1,27 @@
+[
+  {
+    "id": 1,
+    "name_en": "Wuhan Lianhe Printing Co., Ltd.",
+    "name_zh": "武汉联合印务有限公司",
+    "aliases": [
+      "Lianhe Printing",
+      "联合印务"
+    ]
+  },
+  {
+    "id": 2,
+    "name_en": "Acme Cloud Hosting Ltd.",
+    "name_zh": "艾克米云托管有限公司",
+    "aliases": [
+      "Acme Cloud"
+    ]
+  },
+  {
+    "id": 3,
+    "name_en": "Hanyang Coffee Supply",
+    "name_zh": "汉阳咖啡供应",
+    "aliases": [
+      "Hanyang Coffee"
+    ]
+  }
+]

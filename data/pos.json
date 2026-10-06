@@ -1,0 +1,26 @@
+[
+  {
+    "po_id": 1,
+    "ref": "PO-2026-001",
+    "vendor_id": 1,
+    "cap": "10",
+    "expiry": "2026-10-31",
+    "period_days": 0
+  },
+  {
+    "po_id": 2,
+    "ref": "PO-2026-002",
+    "vendor_id": 2,
+    "cap": "5",
+    "expiry": "2026-12-31",
+    "period_days": 30
+  },
+  {
+    "po_id": 3,
+    "ref": "PO-2026-003",
+    "vendor_id": 3,
+    "cap": "3",
+    "expiry": "2026-12-31",
+    "period_days": 7
+  }
+]

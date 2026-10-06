@@ -1,0 +1,16 @@
+digraph State {
+ rankdir=LR;
+ owner [label="Owner queue/cancel"];
+ changes [label="changes / changeIds / nonce"];
+ safety [label="Owner instant actions"];
+ restrictions [label="paused / active / closed / isAgent / dailyCap"];
+ execute [label="Delayed execute"];
+ registry [label="vendors / POs / agents / dailyCap / paused"];
+ pay [label="Authorized pay (nonReentrant)"];
+ rolls [label="day and period rolls (also on policy block)"];
+ paid [label="spent / spentToday / invoicePaid"];
+ transfer [label="Transfer then Paid event"];
+ owner -> changes; safety -> restrictions; execute -> registry;
+ execute -> changes; pay -> rolls; pay -> paid [label="all rules pass"];
+ paid -> transfer [label="revert rolls back all state"];
+}

@@ -1,0 +1,16 @@
+{
+  "openzeppelin": {
+    "version": "5.0.2",
+    "git_commit": "dbb6104ce834628e473d2173bbc9d47f81a9eec3",
+    "archive": "https://registry.npmjs.org/@openzeppelin/contracts/-/contracts-5.0.2.tgz",
+    "sha256": "709a5996fd3fdccc1b3b38c4b87dcafa103b9126b63839f248c4172ba21093fa",
+    "license": "MIT"
+  },
+  "forge_std": {
+    "version": "1.9.7",
+    "git_commit": "77041d2ce690e692d6e03cc812b57d1ddaa4d505",
+    "archive": "https://codeload.github.com/foundry-rs/forge-std/tar.gz/refs/tags/v1.9.7",
+    "sha256": "45157353ab49eab01d294565866731e599b32401757229689ee459aa26b7ee94",
+    "license": "MIT OR Apache-2.0"
+  }
+}

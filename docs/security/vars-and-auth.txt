@@ -1,0 +1,174 @@
+
+Contract Ownable
++----------------------+-------------------------+--------------------------+
+| Function             | State variables written | Conditions on msg.sender |
++----------------------+-------------------------+--------------------------+
+| _msgSender           | []                      | []                       |
+| _msgData             | []                      | []                       |
+| _contextSuffixLength | []                      | []                       |
+| constructor          | ['_owner']              | []                       |
+| owner                | []                      | []                       |
+| _checkOwner          | []                      | []                       |
+| renounceOwnership    | ['_owner']              | []                       |
+| transferOwnership    | ['_owner']              | []                       |
+| _transferOwnership   | ['_owner']              | []                       |
++----------------------+-------------------------+--------------------------+
+
+Contract Ownable2Step
++----------------------+-----------------------------+--------------------------+
+| Function             | State variables written     | Conditions on msg.sender |
++----------------------+-----------------------------+--------------------------+
+| constructor          | ['_owner', '_pendingOwner'] | []                       |
+| owner                | []                          | []                       |
+| _checkOwner          | []                          | []                       |
+| renounceOwnership    | ['_owner', '_pendingOwner'] | []                       |
+| transferOwnership    | ['_owner', '_pendingOwner'] | []                       |
+| _transferOwnership   | ['_owner']                  | []                       |
+| _msgSender           | []                          | []                       |
+| _msgData             | []                          | []                       |
+| _contextSuffixLength | []                          | []                       |
+| pendingOwner         | []                          | []                       |
+| transferOwnership    | ['_pendingOwner']           | []                       |
+| _transferOwnership   | ['_owner', '_pendingOwner'] | []                       |
+| acceptOwnership      | ['_owner', '_pendingOwner'] | []                       |
++----------------------+-----------------------------+--------------------------+
+
+Contract IERC20
++--------------+-------------------------+--------------------------+
+| Function     | State variables written | Conditions on msg.sender |
++--------------+-------------------------+--------------------------+
+| totalSupply  | []                      | []                       |
+| balanceOf    | []                      | []                       |
+| transfer     | []                      | []                       |
+| allowance    | []                      | []                       |
+| approve      | []                      | []                       |
+| transferFrom | []                      | []                       |
++--------------+-------------------------+--------------------------+
+
+Contract IERC20Permit
++------------------+-------------------------+--------------------------+
+| Function         | State variables written | Conditions on msg.sender |
++------------------+-------------------------+--------------------------+
+| permit           | []                      | []                       |
+| nonces           | []                      | []                       |
+| DOMAIN_SEPARATOR | []                      | []                       |
++------------------+-------------------------+--------------------------+
+
+Contract SafeERC20
++-------------------------+-------------------------+--------------------------+
+| Function                | State variables written | Conditions on msg.sender |
++-------------------------+-------------------------+--------------------------+
+| safeTransfer            | []                      | []                       |
+| safeTransferFrom        | []                      | []                       |
+| safeIncreaseAllowance   | []                      | []                       |
+| safeDecreaseAllowance   | []                      | []                       |
+| forceApprove            | []                      | []                       |
+| _callOptionalReturn     | []                      | []                       |
+| _callOptionalReturnBool | []                      | []                       |
++-------------------------+-------------------------+--------------------------+
+
+Contract Address
++----------------------------+-------------------------+--------------------------+
+| Function                   | State variables written | Conditions on msg.sender |
++----------------------------+-------------------------+--------------------------+
+| sendValue                  | []                      | []                       |
+| functionCall               | []                      | []                       |
+| functionCallWithValue      | []                      | []                       |
+| functionStaticCall         | []                      | []                       |
+| functionDelegateCall       | []                      | []                       |
+| verifyCallResultFromTarget | []                      | []                       |
+| verifyCallResult           | []                      | []                       |
+| _revert                    | []                      | []                       |
++----------------------------+-------------------------+--------------------------+
+
+Contract Context
++----------------------+-------------------------+--------------------------+
+| Function             | State variables written | Conditions on msg.sender |
++----------------------+-------------------------+--------------------------+
+| _msgSender           | []                      | []                       |
+| _msgData             | []                      | []                       |
+| _contextSuffixLength | []                      | []                       |
++----------------------+-------------------------+--------------------------+
+
+Contract Pausable
++----------------------+-------------------------+--------------------------+
+| Function             | State variables written | Conditions on msg.sender |
++----------------------+-------------------------+--------------------------+
+| _msgSender           | []                      | []                       |
+| _msgData             | []                      | []                       |
+| _contextSuffixLength | []                      | []                       |
+| constructor          | ['_paused']             | []                       |
+| paused               | []                      | []                       |
+| _requireNotPaused    | []                      | []                       |
+| _requirePaused       | []                      | []                       |
+| _pause               | ['_paused']             | []                       |
+| _unpause             | ['_paused']             | []                       |
++----------------------+-------------------------+--------------------------+
+
+Contract ReentrancyGuard
++-------------------------------------+----------------------------+--------------------------+
+| Function                            | State variables written    | Conditions on msg.sender |
++-------------------------------------+----------------------------+--------------------------+
+| constructor                         | ['_status']                | []                       |
+| _nonReentrantBefore                 | ['_status']                | []                       |
+| _nonReentrantAfter                  | ['_status']                | []                       |
+| _reentrancyGuardEntered             | []                         | []                       |
+| slitherConstructorConstantVariables | ['ENTERED', 'NOT_ENTERED'] | []                       |
++-------------------------------------+----------------------------+--------------------------+
+
+Contract Countersign
++-------------------------+----------------------------------------------------------------------------+---------------------------+
+| Function                | State variables written                                                    | Conditions on msg.sender  |
++-------------------------+----------------------------------------------------------------------------+---------------------------+
+| constructor             | ['_status']                                                                | []                        |
+| _nonReentrantBefore     | ['_status']                                                                | []                        |
+| _nonReentrantAfter      | ['_status']                                                                | []                        |
+| _reentrancyGuardEntered | []                                                                         | []                        |
+| constructor             | ['_paused']                                                                | []                        |
+| paused                  | []                                                                         | []                        |
+| _requireNotPaused       | []                                                                         | []                        |
+| _requirePaused          | []                                                                         | []                        |
+| _pause                  | ['_paused']                                                                | []                        |
+| _unpause                | ['_paused']                                                                | []                        |
+| _msgSender              | []                                                                         | []                        |
+| _msgData                | []                                                                         | []                        |
+| _contextSuffixLength    | []                                                                         | []                        |
+| pendingOwner            | []                                                                         | []                        |
+| transferOwnership       | ['_pendingOwner']                                                          | []                        |
+| _transferOwnership      | ['_owner', '_pendingOwner']                                                | []                        |
+| acceptOwnership         | ['_owner', '_pendingOwner']                                                | []                        |
+| constructor             | ['_owner', '_pendingOwner']                                                | []                        |
+| owner                   | []                                                                         | []                        |
+| _checkOwner             | []                                                                         | []                        |
+| renounceOwnership       | ['_owner', '_pendingOwner']                                                | []                        |
+| transferOwnership       | ['_owner', '_pendingOwner']                                                | []                        |
+| _transferOwnership      | ['_owner']                                                                 | []                        |
+| constructor             | ['_owner', 'currentDay', 'dailyCap', 'delay', 'token']                     | []                        |
+| queueAddVendor          | ['changeIds', 'changeNonce', 'changes']                                    | []                        |
+| queueSetPayout          | ['changeIds', 'changeNonce', 'changes']                                    | []                        |
+| queueAddPO              | ['changeIds', 'changeNonce', 'changes']                                    | []                        |
+| queueAddAgent           | ['changeIds', 'changeNonce', 'changes']                                    | []                        |
+| queueRaiseDailyCap      | ['changeIds', 'changeNonce', 'changes']                                    | []                        |
+| queueUnpause            | ['changeIds', 'changeNonce', 'changes']                                    | []                        |
+| queueWithdraw           | ['changeIds', 'changeNonce', 'changes']                                    | []                        |
+| _queue                  | ['changeIds', 'changeNonce', 'changes']                                    | []                        |
+| execute                 | ['_paused', '_status', 'changes', 'dailyCap', 'isAgent', 'pos', 'vendors'] | []                        |
+| cancel                  | ['changes']                                                                | []                        |
+| _available              | []                                                                         | []                        |
+| pause                   | ['_paused']                                                                | []                        |
+| deactivateVendor        | ['vendors']                                                                | []                        |
+| closePO                 | ['pos']                                                                    | []                        |
+| revokeAgent             | ['isAgent']                                                                | []                        |
+| lowerDailyCap           | ['dailyCap']                                                               | []                        |
+| pay                     | ['_status', 'currentDay', 'invoicePaid', 'pos', 'spentToday']              | ['! isAgent[msg.sender]'] |
+| _reason                 | []                                                                         | []                        |
+| _rollPeriod             | ['pos']                                                                    | []                        |
+| _transfer               | []                                                                         | []                        |
+| _validPayout            | []                                                                         | []                        |
+| changeCount             | []                                                                         | []                        |
+| getChange               | []                                                                         | []                        |
+| poRemaining             | []                                                                         | []                        |
+| remainingToday          | []                                                                         | []                        |
+| vaultBalance            | []                                                                         | []                        |
+| receive                 | []                                                                         | []                        |
++-------------------------+----------------------------------------------------------------------------+---------------------------+
