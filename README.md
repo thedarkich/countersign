@@ -25,6 +25,7 @@ The frontend is a **mock demo**, not a live view of the deployed vault. There is
 Use Node.js 20 and npm. On Windows, the project development environment is Ubuntu in WSL; keep the checkout in your Linux home directory.
 
 ```bash
+git clone https://github.com/thedarkich/countersign.git
 cd countersign/frontend
 npm ci
 npm run dev -- --mode mock
