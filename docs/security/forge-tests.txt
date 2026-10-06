@@ -1,21 +1,15 @@
-Compiling 5 files with Solc 0.8.24
-Solc 0.8.24 finished in 2.96s
-Compiler run successful with warnings:
-Warning (2018): Function state mutability can be restricted to view
-   --> test/Countersign.t.sol:303:5:
-    |
-303 |     function testUnknownViews() public {
-    |     ^ (Relevant source part starts here and spans across multiple lines).
-
+Compiling 2 files with Solc 0.8.24
+Solc 0.8.24 finished in 1.82s
+Compiler run successful!
 
 Ran 1 test for test/Countersign.t.sol:TokenCompatibilityTest
 [PASS] testMissingReturnDataSupported() (gas: 3062683)
-Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 478.59µs (322.45µs CPU time)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 1.44ms (963.78µs CPU time)
 
 Ran 2 tests for test/Scripts.t.sol:ScriptsTest
-[PASS] testLocalDeploySetupExecuteFlow() (gas: 9571275)
+[PASS] testLocalDeploySetupExecuteFlow() (gas: 31393776)
 [PASS] testWrongRPCChainFailsBeforeDeployment() (gas: 2938593)
-Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 25.60ms (25.52ms CPU time)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 17.10ms (17.43ms CPU time)
 
 Ran 39 tests for test/Countersign.t.sol:NativeVaultTest
 [PASS] testAllOwnerEntryPointsDenyOtherCallers() (gas: 92867)
@@ -39,8 +33,8 @@ Ran 39 tests for test/Countersign.t.sol:NativeVaultTest
 [PASS] testDuplicateSurvivesPeriodAndDayReset() (gas: 136000)
 [PASS] testExpiryIsInclusive() (gas: 147623)
 [PASS] testFirstFailureWins() (gas: 195144)
-[PASS] testFuzzArbitraryRecipientCannotReceive(address,uint96) (runs: 512, μ: 45955, ~: 46013)
-[PASS] testFuzzValidPaymentConservesFunds(uint96) (runs: 512, μ: 143878, ~: 143941)
+[PASS] testFuzzArbitraryRecipientCannotReceive(address,uint96) (runs: 512, μ: 45956, ~: 46013)
+[PASS] testFuzzValidPaymentConservesFunds(uint96) (runs: 512, μ: 143891, ~: 143941)
 [PASS] testInstantCloseAndRevoke() (gas: 61950)
 [PASS] testMaximumAmountLogsInsteadOfArithmeticRevert() (gas: 158831)
 [PASS] testNonAgentRevertsEvenWhenPaused() (gas: 47103)
@@ -57,54 +51,7 @@ Ran 39 tests for test/Countersign.t.sol:NativeVaultTest
 [PASS] testUnpauseNeedsDelay() (gas: 109078)
 [PASS] testWithdrawInsufficientRollsBackExecutedFlag() (gas: 149196)
 [PASS] testWithdrawUsesOwnerAtExecutionAfterTwoStepTransfer() (gas: 192250)
-Suite result: ok. 39 passed; 0 failed; 0 skipped; finished in 34.91ms (49.71ms CPU time)
-
-Ran 5 tests for test/SetupValues.t.sol:SetupValuesTest
-[PASS] testChinaDateBoundaryAndLeapYears() (gas: 215084)
-[PASS] testExactAmountConversions() (gas: 25835)
-[PASS] testExcessPrecisionAndMalformedAmountsFail() (gas: 21911)
-[PASS] testInvalidDatesFail() (gas: 23442)
-[PASS] testRealFixtureJSONDecoding() (gas: 2055316)
-Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 2.67s (2.67s CPU time)
-
-Ran 3 tests for test/Countersign.invariant.t.sol:NativeInvariantTest
-[PASS] invariantBudgetsAndDailyCapHold() (runs: 128, calls: 16384, reverts: 0)
-
-╭----------------+---------------+-------+---------+----------╮
-| Contract       | Selector      | Calls | Reverts | Discards |
-+=============================================================+
-| PaymentHandler | advanceTime   | 5453  | 0       | 0        |
-|----------------+---------------+-------+---------+----------|
-| PaymentHandler | randomPayment | 5473  | 0       | 0        |
-|----------------+---------------+-------+---------+----------|
-| PaymentHandler | validPayment  | 5458  | 0       | 0        |
-╰----------------+---------------+-------+---------+----------╯
-
-[PASS] invariantConservationOfFunding() (runs: 128, calls: 16384, reverts: 0)
-
-╭----------------+---------------+-------+---------+----------╮
-| Contract       | Selector      | Calls | Reverts | Discards |
-+=============================================================+
-| PaymentHandler | advanceTime   | 5453  | 0       | 0        |
-|----------------+---------------+-------+---------+----------|
-| PaymentHandler | randomPayment | 5473  | 0       | 0        |
-|----------------+---------------+-------+---------+----------|
-| PaymentHandler | validPayment  | 5458  | 0       | 0        |
-╰----------------+---------------+-------+---------+----------╯
-
-[PASS] invariantNoFundsReachUnregisteredAddress() (runs: 128, calls: 16384, reverts: 0)
-
-╭----------------+---------------+-------+---------+----------╮
-| Contract       | Selector      | Calls | Reverts | Discards |
-+=============================================================+
-| PaymentHandler | advanceTime   | 5453  | 0       | 0        |
-|----------------+---------------+-------+---------+----------|
-| PaymentHandler | randomPayment | 5473  | 0       | 0        |
-|----------------+---------------+-------+---------+----------|
-| PaymentHandler | validPayment  | 5458  | 0       | 0        |
-╰----------------+---------------+-------+---------+----------╯
-
-Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 2.71s (7.19s CPU time)
+Suite result: ok. 39 passed; 0 failed; 0 skipped; finished in 39.98ms (66.45ms CPU time)
 
 Ran 39 tests for test/Countersign.t.sol:TokenVaultTest
 [PASS] testAllOwnerEntryPointsDenyOtherCallers() (gas: 92889)
@@ -130,7 +77,7 @@ Ran 39 tests for test/Countersign.t.sol:TokenVaultTest
 [PASS] testFalseReturningTokenRollsBackEverything() (gas: 158171)
 [PASS] testFirstFailureWins() (gas: 216185)
 [PASS] testFuzzArbitraryRecipientCannotReceive(address,uint96) (runs: 512, μ: 55737, ~: 55795)
-[PASS] testFuzzValidPaymentConservesFunds(uint96) (runs: 512, μ: 153188, ~: 153246)
+[PASS] testFuzzValidPaymentConservesFunds(uint96) (runs: 512, μ: 153193, ~: 153246)
 [PASS] testInstantCloseAndRevoke() (gas: 71710)
 [PASS] testMaximumAmountLogsInsteadOfArithmeticRevert() (gas: 167224)
 [PASS] testNonAgentRevertsEvenWhenPaused() (gas: 47125)
@@ -146,19 +93,27 @@ Ran 39 tests for test/Countersign.t.sol:TokenVaultTest
 [PASS] testUnpauseNeedsDelay() (gas: 109100)
 [PASS] testWithdrawInsufficientRollsBackExecutedFlag() (gas: 154639)
 [PASS] testWithdrawUsesOwnerAtExecutionAfterTwoStepTransfer() (gas: 201241)
-Suite result: ok. 39 passed; 0 failed; 0 skipped; finished in 2.99s (2.99s CPU time)
+Suite result: ok. 39 passed; 0 failed; 0 skipped; finished in 40.58ms (91.66ms CPU time)
 
-Ran 3 tests for test/Countersign.invariant.t.sol:TokenInvariantTest
+Ran 5 tests for test/SetupValues.t.sol:SetupValuesTest
+[PASS] testChinaDateBoundaryAndLeapYears() (gas: 215084)
+[PASS] testExactAmountConversions() (gas: 25835)
+[PASS] testExcessPrecisionAndMalformedAmountsFail() (gas: 21911)
+[PASS] testInvalidDatesFail() (gas: 23442)
+[PASS] testRealFixtureJSONDecoding() (gas: 2055316)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 2.18s (10.12ms CPU time)
+
+Ran 3 tests for test/Countersign.invariant.t.sol:NativeInvariantTest
 [PASS] invariantBudgetsAndDailyCapHold() (runs: 128, calls: 16384, reverts: 0)
 
 ╭----------------+---------------+-------+---------+----------╮
 | Contract       | Selector      | Calls | Reverts | Discards |
 +=============================================================+
-| PaymentHandler | advanceTime   | 5453  | 0       | 0        |
+| PaymentHandler | advanceTime   | 5460  | 0       | 0        |
 |----------------+---------------+-------+---------+----------|
-| PaymentHandler | randomPayment | 5473  | 0       | 0        |
+| PaymentHandler | randomPayment | 5535  | 0       | 0        |
 |----------------+---------------+-------+---------+----------|
-| PaymentHandler | validPayment  | 5458  | 0       | 0        |
+| PaymentHandler | validPayment  | 5389  | 0       | 0        |
 ╰----------------+---------------+-------+---------+----------╯
 
 [PASS] invariantConservationOfFunding() (runs: 128, calls: 16384, reverts: 0)
@@ -166,11 +121,11 @@ Ran 3 tests for test/Countersign.invariant.t.sol:TokenInvariantTest
 ╭----------------+---------------+-------+---------+----------╮
 | Contract       | Selector      | Calls | Reverts | Discards |
 +=============================================================+
-| PaymentHandler | advanceTime   | 5453  | 0       | 0        |
+| PaymentHandler | advanceTime   | 5460  | 0       | 0        |
 |----------------+---------------+-------+---------+----------|
-| PaymentHandler | randomPayment | 5473  | 0       | 0        |
+| PaymentHandler | randomPayment | 5535  | 0       | 0        |
 |----------------+---------------+-------+---------+----------|
-| PaymentHandler | validPayment  | 5458  | 0       | 0        |
+| PaymentHandler | validPayment  | 5389  | 0       | 0        |
 ╰----------------+---------------+-------+---------+----------╯
 
 [PASS] invariantNoFundsReachUnregisteredAddress() (runs: 128, calls: 16384, reverts: 0)
@@ -178,13 +133,52 @@ Ran 3 tests for test/Countersign.invariant.t.sol:TokenInvariantTest
 ╭----------------+---------------+-------+---------+----------╮
 | Contract       | Selector      | Calls | Reverts | Discards |
 +=============================================================+
-| PaymentHandler | advanceTime   | 5453  | 0       | 0        |
+| PaymentHandler | advanceTime   | 5460  | 0       | 0        |
 |----------------+---------------+-------+---------+----------|
-| PaymentHandler | randomPayment | 5473  | 0       | 0        |
+| PaymentHandler | randomPayment | 5535  | 0       | 0        |
 |----------------+---------------+-------+---------+----------|
-| PaymentHandler | validPayment  | 5458  | 0       | 0        |
+| PaymentHandler | validPayment  | 5389  | 0       | 0        |
 ╰----------------+---------------+-------+---------+----------╯
 
-Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 3.25s (8.87s CPU time)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 2.90s (7.46s CPU time)
 
-Ran 7 test suites in 3.25s (11.68s CPU time): 92 tests passed, 0 failed, 0 skipped (92 total tests)
+Ran 3 tests for test/Countersign.invariant.t.sol:TokenInvariantTest
+[PASS] invariantBudgetsAndDailyCapHold() (runs: 128, calls: 16384, reverts: 0)
+
+╭----------------+---------------+-------+---------+----------╮
+| Contract       | Selector      | Calls | Reverts | Discards |
++=============================================================+
+| PaymentHandler | advanceTime   | 5460  | 0       | 0        |
+|----------------+---------------+-------+---------+----------|
+| PaymentHandler | randomPayment | 5535  | 0       | 0        |
+|----------------+---------------+-------+---------+----------|
+| PaymentHandler | validPayment  | 5389  | 0       | 0        |
+╰----------------+---------------+-------+---------+----------╯
+
+[PASS] invariantConservationOfFunding() (runs: 128, calls: 16384, reverts: 0)
+
+╭----------------+---------------+-------+---------+----------╮
+| Contract       | Selector      | Calls | Reverts | Discards |
++=============================================================+
+| PaymentHandler | advanceTime   | 5460  | 0       | 0        |
+|----------------+---------------+-------+---------+----------|
+| PaymentHandler | randomPayment | 5535  | 0       | 0        |
+|----------------+---------------+-------+---------+----------|
+| PaymentHandler | validPayment  | 5389  | 0       | 0        |
+╰----------------+---------------+-------+---------+----------╯
+
+[PASS] invariantNoFundsReachUnregisteredAddress() (runs: 128, calls: 16384, reverts: 0)
+
+╭----------------+---------------+-------+---------+----------╮
+| Contract       | Selector      | Calls | Reverts | Discards |
++=============================================================+
+| PaymentHandler | advanceTime   | 5460  | 0       | 0        |
+|----------------+---------------+-------+---------+----------|
+| PaymentHandler | randomPayment | 5535  | 0       | 0        |
+|----------------+---------------+-------+---------+----------|
+| PaymentHandler | validPayment  | 5389  | 0       | 0        |
+╰----------------+---------------+-------+---------+----------╯
+
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 3.55s (9.74s CPU time)
+
+Ran 7 test suites in 3.55s (8.73s CPU time): 92 tests passed, 0 failed, 0 skipped (92 total tests)

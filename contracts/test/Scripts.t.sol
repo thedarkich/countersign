@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
+import {TestnetProofHarness} from "./TestnetProof.t.sol";
 import {Test} from "forge-std/Test.sol";
 import {Deploy} from "../script/Deploy.s.sol";
 import {Setup} from "../script/Setup.s.sol";
@@ -42,6 +43,12 @@ contract ScriptsTest is Test {
         vm.deal(address(vault), 1 ether);
         vm.prank(guarded);
         assertTrue(vault.pay(1, address(1001), 1, 0.1 ether, keccak256("script-invoice")));
+        // vm.setEnv is process-wide: all script cases that change wallet/vault
+        // values run within one test to avoid parallel environment races.
+        TestnetProofHarness proof = new TestnetProofHarness();
+        proof.rehearseNativeProofAndFunding();
+        proof.rehearseTokenProofAndFunding();
+        proof.assertMainnetRefused();
     }
 
     function testWrongRPCChainFailsBeforeDeployment() public {

@@ -1,0 +1,147 @@
+{
+  "network": "testnet",
+  "chain_id": 968,
+  "contract_address": "0x89Ea32CCB3c951ad48a56Dd3A156aeF616bD7C1B",
+  "deploy_tx": "0x466fa576d17af4be7d74097f88891a838924260a44370c9f6c8ea0a00ef6fe82",
+  "deploy_block": 25901990,
+  "owner": "0xCEC6a9DFA4318A9AacFF50a8fdC88eBb20059272",
+  "token": "0x75edC9335175Fc0552D51D48439F229c10420fe3",
+  "token_decimals": 6,
+  "timelock_seconds": 120,
+  "initial_daily_cap_base": "15000000",
+  "explorer": "https://scan.bohr.life",
+  "evidence": {
+    "Paid": {
+      "network": "testnet",
+      "contract_address": "0x89ea32ccb3c951ad48a56dd3a156aef616bd7c1b",
+      "tx_hash": "0x5740d22bab9ea68e5293a39915da8f9e1039901856b3907044f5ec895b9ad0a4",
+      "log_index": 1,
+      "block_number": 25903290,
+      "block_time": "2026-10-06T11:42:31+00:00",
+      "name": "Paid",
+      "args": {
+        "vendorId": 1,
+        "poId": 1,
+        "agent": "0x10840Aea6D6f835560f43656768a0d5B2A4ef063",
+        "payTo": "0x419D0c4F429981b45548724404E5a2CeFcB303d0",
+        "amount": 100000,
+        "invoiceHash": "0x781c329a0bb2a0433c443a690f77e8e748e449411c4bb814c041ed095eb5782f"
+      }
+    },
+    "OverBudget": {
+      "network": "testnet",
+      "contract_address": "0x89ea32ccb3c951ad48a56dd3a156aef616bd7c1b",
+      "tx_hash": "0x457da15f0b4f54f363077f7a0bdc3d3104b98a4489a474eeba0c9374d356f02c",
+      "log_index": 0,
+      "block_number": 25903294,
+      "block_time": "2026-10-06T11:42:34+00:00",
+      "name": "Blocked",
+      "args": {
+        "vendorId": 1,
+        "poId": 1,
+        "agent": "0x10840Aea6D6f835560f43656768a0d5B2A4ef063",
+        "reason": 9,
+        "payTo": "0x419D0c4F429981b45548724404E5a2CeFcB303d0",
+        "amount": 10000001,
+        "invoiceHash": "0xab73717fbd9b4702f6856220dd7795e68245736d926767fe4ed42fe82bf9c40e"
+      }
+    },
+    "DuplicateInvoice": {
+      "network": "testnet",
+      "contract_address": "0x89ea32ccb3c951ad48a56dd3a156aef616bd7c1b",
+      "tx_hash": "0xf03ecdbbe816c16cf2693c34723379866626846c1a081657ce237ef9a49779f6",
+      "log_index": 0,
+      "block_number": 25903297,
+      "block_time": "2026-10-06T11:42:36+00:00",
+      "name": "Blocked",
+      "args": {
+        "vendorId": 1,
+        "poId": 1,
+        "agent": "0x10840Aea6D6f835560f43656768a0d5B2A4ef063",
+        "reason": 10,
+        "payTo": "0x419D0c4F429981b45548724404E5a2CeFcB303d0",
+        "amount": 200000,
+        "invoiceHash": "0x781c329a0bb2a0433c443a690f77e8e748e449411c4bb814c041ed095eb5782f"
+      }
+    },
+    "PayoutMismatch": {
+      "network": "testnet",
+      "contract_address": "0x89ea32ccb3c951ad48a56dd3a156aef616bd7c1b",
+      "tx_hash": "0x80b7a3de74dd44267062feb896c77c5dd09b03e83dc7d39853f04cf5aaa7242c",
+      "log_index": 0,
+      "block_number": 25903303,
+      "block_time": "2026-10-06T11:42:41+00:00",
+      "name": "Blocked",
+      "args": {
+        "vendorId": 1,
+        "poId": 1,
+        "agent": "0x8CF8109e5817fACB3235c01E93E233BF478c0659",
+        "reason": 5,
+        "payTo": "0x3135Ee6Aa8e71E2e51E56314f23c7a96c72DF47b",
+        "amount": 100000,
+        "invoiceHash": "0xde508f447f18b68a640d7fce25882534dda4456897774cb38d5a8589fceaf83f"
+      }
+    }
+  },
+  "source_verified": true,
+  "setup_txs": [
+    {
+      "hash": "0xe49dcc4a4b18e3050ad4dba8d60c944817c41726d3d876072827ef48e1df43cf",
+      "function": "queueAddVendor(uint256,address)"
+    },
+    {
+      "hash": "0x92213c6b94abdda7b0f6c2bd886d4b6aac9e2c5920277a7d769fa352ce99c183",
+      "function": "queueAddVendor(uint256,address)"
+    },
+    {
+      "hash": "0x7850767c08923f37d92c177230227070625a46b020697266ad058128e5aa42ff",
+      "function": "queueAddVendor(uint256,address)"
+    },
+    {
+      "hash": "0xfa11c4cf1d6f4953e04e8dec1cd1a759e6887ad94c4dd578a28652f2c6d17d66",
+      "function": "queueAddPO(uint256,uint256,uint256,uint64,uint32)"
+    },
+    {
+      "hash": "0x93a0d80c6a6ca635990fde7f99cc494bb801ec502a2e91d90788e9176e57b8d1",
+      "function": "queueAddPO(uint256,uint256,uint256,uint64,uint32)"
+    },
+    {
+      "hash": "0xa44fd5424919e79007c4b35b7c680d86042930f308ddfa3586b822df624169d7",
+      "function": "queueAddPO(uint256,uint256,uint256,uint64,uint32)"
+    },
+    {
+      "hash": "0x4808a1904e7ed707ed4602d198e60c3487eda96261dc98f3c859df37d2f4e990",
+      "function": "queueAddAgent(address)"
+    },
+    {
+      "hash": "0xd41f59e83ed9ace6ff6a0eb1831e7459a613063d208d875738874f74c71179d9",
+      "function": "queueAddAgent(address)"
+    }
+  ],
+  "timelock": {
+    "change_count": 8,
+    "first_id": "0x04fe81e435dd5e3d7605aa551882f9d6a5879dec0caa8aa4b557f6a971d4b020",
+    "last_id": "0x64015e1b6293139ae39f2ae38fb881c44f4d320c058a6b53cd5755da17e2eadb",
+    "first_eta": 1791286541,
+    "last_eta": 1791286574,
+    "checked_chain_timestamp": 1791286535,
+    "seconds_until_last_ready": 39
+  },
+  "funding_tx": "0x24d67b13fa33712d30eb6a7006559d46d504883de1db0cfc46048fe9a3ae8ade",
+  "funded_token_base": "20000000",
+  "execute_txs": [
+    "0x6936331119488fe8856b8493ff9a5ee051664f4dd070c63484131e3b66cc6d2e",
+    "0x1ffa4e60126fdbfe869131d85943f26b3ffeca0e38bb2294cddf215f65029742",
+    "0x2574f2abf478093251557c16d6e67f7e3d6c72e0e6fbf0425c4906bcde473a29",
+    "0x51d14d228ef104f0266a012634fcf94afadb8bb6a9611fa1fb6acd80dc79f3d2",
+    "0xbdbcbbcdf80e6751d2daead8745a6cb58c7f37bc67fe7d1c7b946b04c6813aae",
+    "0xa9f9b0e7cde0d2b6a5bc5bf9502f8aa9919a86131d08096945759637c50ea33e",
+    "0x1cb0a87bf95e85961f47eb89aae9a74ec3a6c9f5050d4156b83d1f48cc01ce45",
+    "0xb7b41202ca8b4e1500956e8606f709502a2faa765dd99772ed3b584f667f52de"
+  ],
+  "timelock_verified": true,
+  "testnet_proof_complete": true,
+  "vault_balance_base": "19900000",
+  "remaining_today_base": "14900000",
+  "provenance": "Direct scripted contract proof; no AI calls or AI-fooled claim."
+}

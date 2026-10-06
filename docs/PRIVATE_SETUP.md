@@ -1,3 +1,5 @@
+> Completed on 2026-10-06: the human ran the hidden-input helper and it verified all four wallet identities. The deployer and testnet owner subsequently signed the live testnet deployment/setup/funding; both agent keys signed the contract proof. Do not repeat key export. The instructions below are retained for recovery only. Mainnet owner signing remains in the human wallet.
+
 # Private signing-key helper
 
 The wallet extension blocks browser automation. Codex can save and validate exports, but cannot read them from MetaMask. In your own Ubuntu terminal, run:

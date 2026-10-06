@@ -31,7 +31,20 @@ The initial install used official release packages after a full Git clone stalle
 
 Every BOT Chain broadcast requires `--legacy`. Supply the project environment privately to the process; never put keys in command-line arguments or logs. Testnet owner signing uses the configured throwaway key. On mainnet, the human runs Setup with `--account owner` on their own laptop; no mainnet owner key enters the project/server.
 
-No live deployment has been completed. Do not invent addresses or tag Phase 1 complete until testnet proof, mainnet deployment and real explorer evidence exist.
+BOT Chain testnet deployment: [0x89Ea32CCB3c951ad48a56Dd3A156aeF616bD7C1B](https://scan.bohr.life/address/0x89Ea32CCB3c951ad48a56Dd3A156aeF616bD7C1B). Source verification passed. Public receipts and initial proof are recorded in `../docs/deployments/testnet.json`. Mainnet funding/deployment remain, so Phase 1 is not yet complete.
+
+## Testnet operations
+
+The project configuration is outside `contracts/`; pass it directly to the runtime without printing it or placing keys in arguments:
+
+```bash
+../backend/.venv/bin/python -m dotenv -f ../.env run --no-override -- \
+  forge script script/Execute.s.sol:Execute --rpc-url https://rpc.bohr.life --broadcast --legacy --slow
+```
+
+`TestnetProof.s.sol:FundTestnet` tops the vault up to 20 test tokens. `ProveTestnet` sends a 0.1-token payment and three blocked attempts (payout mismatch, over-budget, duplicate with a changed amount); it requires a fresh, normalized `EVIDENCE_INVOICE_NUMBER`. Both scripts refuse mainnet. These are direct contract checks and do not claim that an AI was fooled. The initial proof ID is `CSLIVE20261006A`; never reuse it to pay again. `scripts/record_testnet_proof.py` verifies this initial checkpoint and indexes its public receipts without loading keys; its exact balance assertions apply before further payments.
+
+Foundry's `vm.setEnv` is process-wide. Wallet/vault-changing rehearsals are grouped in one script-flow test to avoid parallel test contamination. No contract logic changed for this deployment.
 
 ## Scope and safety
 
