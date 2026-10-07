@@ -56,9 +56,10 @@ Offline evaluation runs from the writable local checkout with explicit budget au
 ## Verified deployment — 7 October 2026
 
 - HTTPS preview: https://139-180-194-19.sslip.io/#/ledger (testnet, read-only).
-- Image: `countersign-api:ffa05c4`; server release directory `/opt/countersign/releases/ffa05c4`. Previous `c2c5de5` image/release retained for rollback.
+- Image: `countersign-api:a962754`; server release directory `/opt/countersign/releases/a962754`. Previous `ffa05c4` and `c2c5de5` images/releases retained for rollback.
 - Persistent data: `/opt/countersign/shared/data`, UID/GID 10001. Generated admin/privacy settings are in that release's private `deploy/runtime.env`; preserve/reuse the configuration on the next release without printing it. No agent/provider/owner/deployer key was installed for this preview.
-- Latest security rollout backup: `/opt/countersign/shared/data/backups/pre-security-ffa05c4.db`, integrity checked before replacement. The new image passed parser and persistent-budget smoke tests with networking disabled. External HTTPS verifies unchanged receipts and closed admission; one incomplete upload returned 408 after 15.2 seconds while health reads remained available.
+- Previous security rollout backup: `/opt/countersign/shared/data/backups/pre-security-ffa05c4.db`, integrity checked before replacement. The new image passed parser and persistent-budget smoke tests with networking disabled. External HTTPS verifies unchanged receipts and closed admission; one incomplete upload returned 408 after 15.2 seconds while health reads remained available.
+- Latest admission-hardening backup: `/opt/countersign/shared/data/backups/pre-admission-a962754.db`, integrity checked before replacement. The new image passed stored-input revalidation/path-confinement/private-permissions smoke with networking disabled, then public HTTPS preserved all 21 displayed receipts and closed admission.
 - Live containers: `countersign-api-1` (healthy, internal port only) and `countersign-caddy-1` (80/443). Previous connectivity containers remain stopped for rollback. The loopback QA container is stopped.
 - TLS/HTML/config/registry/ledger/reputation checks passed. AI, transactions, bounty and batches are disabled. The non-green readiness response is expected for this closed preview.
 - Verified backup: `/opt/countersign/shared/data/backups/preview-c2c5de5.db`; a controlled API restart retained all 21 displayed ledger events, including the real AI testnet receipt. A restart with no in-flight jobs is not a live crash-during-broadcast rehearsal; that case has isolated Anvil coverage.
@@ -66,8 +67,8 @@ Offline evaluation runs from the writable local checkout with explicit budget au
 Use this environment prefix with operational commands on this release:
 
 ```bash
-cd /opt/countersign/releases/ffa05c4
-export IMAGE_TAG=ffa05c4
+cd /opt/countersign/releases/a962754
+export IMAGE_TAG=a962754
 export COUNTERSIGN_DATA_DIR=/opt/countersign/shared/data
 docker compose -f deploy/docker-compose.yml ps
 ```
@@ -77,3 +78,5 @@ docker compose -f deploy/docker-compose.yml ps
 The API admits at most eight simultaneous modifying requests and allows 15 seconds for each complete upload body; the deadline does not reset per chunk. At most two document parsers run concurrently. Each Linux worker has 384 MiB address-space, 6 CPU-second, 12 wall-second and 24 MiB result limits. Native parser processes are terminated/reaped on cancellation or failure. These processes run under the same OS user; do not describe them as a full filesystem/network sandbox.
 
 AI call reservations use an additive SQLite table shared by API/operator/evaluation runtimes. Reservations commit before provider access and survive restart, even for failed or uncertain requests. Keep this database in persistent storage. Restoring an earlier backup can lose recent reservations; keep AI disabled after restoration until the previous rolling-hour window has expired or usage has been independently reconciled. Calls made before this patch are not reconstructed. A call limit does not enforce a dollar budget. All existing paid-work and public-launch gates still apply.
+
+The waiting queue stores only attempt IDs. Keep stored uploads and selected fixtures until their jobs finish: workers read them again, enforce path/size limits and parse them in the isolated worker. Missing or invalid input becomes an error without sending a payment; there is no automatic retry. Batch preparation drops decoded images after each preview and cleans its new files on cancellation/error. Preview/upload creation is exclusive and private from the first write. Hard process crashes can still leave uncommitted artifacts; evidence retention/deletion remains an operator decision.
