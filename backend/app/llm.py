@@ -8,7 +8,7 @@ from collections import deque
 from collections.abc import Callable
 from typing import TypeVar
 
-from openai import APIError, AsyncOpenAI
+from openai import APIError, APIStatusError, APITimeoutError, AsyncOpenAI
 from pydantic import BaseModel, ValidationError
 
 from app.model_budget import BudgetExhausted
@@ -16,8 +16,25 @@ from app.model_budget import BudgetExhausted
 Model = TypeVar("Model", bound=BaseModel)
 
 
+MODEL_ERROR_CODES = frozenset(
+    {
+        "MODEL_UNAVAILABLE",
+        "MODEL_OUTPUT_INCOMPLETE",
+        "MODEL_OUTPUT_EMPTY",
+        "MODEL_OUTPUT_INVALID",
+        "MODEL_TIMEOUT",
+        "MODEL_AUTH_FAILED",
+        "MODEL_RATE_LIMITED",
+        "MODEL_PROVIDER_ERROR",
+    }
+)
+
+
 class ModelUnavailable(RuntimeError):
-    pass
+    def __init__(self, message, *, code="MODEL_UNAVAILABLE"):
+        super().__init__(message)
+        # Only application-owned codes may enter durable/public step diagnostics.
+        self.code = code if code in MODEL_ERROR_CODES else "MODEL_UNAVAILABLE"
 
 
 class CallLimitReached(ModelUnavailable):
@@ -125,14 +142,37 @@ class ModelGateway:
                     {"role": "user", "content": content},
                 ],
             )
+        except APITimeoutError:
+            raise ModelUnavailable("Model request timed out.", code="MODEL_TIMEOUT") from None
+        except APIStatusError as exc:
+            code = {
+                401: "MODEL_AUTH_FAILED",
+                403: "MODEL_AUTH_FAILED",
+                429: "MODEL_RATE_LIMITED",
+            }.get(exc.status_code, "MODEL_PROVIDER_ERROR")
+            raise ModelUnavailable("Model provider rejected the request.", code=code) from None
+        except APIError:
+            raise ModelUnavailable(
+                "Model provider request failed.", code="MODEL_PROVIDER_ERROR"
+            ) from None
+        try:
             if on_model:
-                on_model(response.model or model)
+                returned = response.model
+                on_model(returned if isinstance(returned, str) and len(returned) <= 120 else model)
+            if not isinstance(response.choices, list):
+                raise TypeError("Invalid choices envelope")
             if not response.choices or response.choices[0].finish_reason != "stop":
-                raise ModelUnavailable("Model returned incomplete output.")
+                raise ModelUnavailable(
+                    "Model returned incomplete output.", code="MODEL_OUTPUT_INCOMPLETE"
+                )
             payload = response.choices[0].message.content
-            if not payload:
-                raise ModelUnavailable("Model returned empty output.")
+            if payload is None or payload == "":
+                raise ModelUnavailable("Model returned empty output.", code="MODEL_OUTPUT_EMPTY")
+            if not isinstance(payload, str):
+                raise TypeError("Invalid content envelope")
             return schema.model_validate_json(payload)
-        except (APIError, ValidationError):
-            # Do not leak provider bodies, submitted invoice text or credentials.
-            raise ModelUnavailable("Model request or response validation failed.") from None
+        except (ValidationError, AttributeError, TypeError):
+            # Never retain the provider body, validation input or raw exception.
+            raise ModelUnavailable(
+                "Model output did not match the required schema.", code="MODEL_OUTPUT_INVALID"
+            ) from None

@@ -31,4 +31,5 @@ deploy/backups/
 # Generated fixtures and private evaluation evidence are runtime data.
 data/invoices/
 data/eval/
+data/rehearsals/
 backend/app/prompts/guard_v2.md

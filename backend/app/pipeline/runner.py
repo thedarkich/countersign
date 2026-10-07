@@ -124,7 +124,7 @@ class PipelineRunner:
                     attempt.tx_hash = exc.tx_hash
                 # Do not publish exception strings: provider/RPC errors can contain private inputs.
                 attempt.error = (
-                    "MODEL_UNAVAILABLE" if isinstance(exc, ModelUnavailable) else "PROCESSING_ERROR"
+                    exc.code if isinstance(exc, ModelUnavailable) else "PROCESSING_ERROR"
                 )
                 for step in attempt.steps:
                     if step["status"] == "running":

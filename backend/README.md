@@ -65,9 +65,13 @@ cd ../backend
 uv run --frozen pytest -q integration/
 ```
 
-On 7 October: **137 unit/API tests and 19 isolated Anvil integration tests passed**. Default/local-chain tests use synthetic inputs, temporary databases and mocked models; no project environment, paid calls or public-chain transactions. Tests cover recovery without resending, revert/policy distinction, prepared-hash persistence, reorg handling, canonical state/receipts, history bounds, reputation attribution/privacy, grouped evaluation and single-process ownership.
+On 7 October: **151 unit/API tests and 28 isolated Anvil integration tests passed**. Default/local-chain tests use synthetic inputs, temporary databases and mocked models; no project environment, paid calls or public-chain transactions. They cover recovery, canonical receipts, bounded parsing/admission/cost, reputation/privacy and evaluation. `integration/test_http_rehearsal.py` also exercises HTTP uploads through a real local vault: hidden instructions, concurrent/changed-amount duplicates, policy changes during model processing and honest reporting when fake invoices pay approved vendors.
 
 The separate real-model rehearsal used exactly two calls and paid 0.05 tUSDT: [receipt](https://scan.bohr.life/tx/0x69ab3f76a936ba4543fdd0f7f9dec6825580500b1f6ba4d66b1917ee8372f357). Its 47.5-second pipeline time is one measured sample, not a latency guarantee or attack-quality benchmark.
+
+A later hidden-PDF check used two more Qwen Flash vision requests and sent no transaction: guarded refused; naive extraction returned unusable output and stopped. No paid retry ran. Stage attack repeatability remains unvalidated; see [backend status](../docs/BACKEND_STATUS.md).
+
+Model failures now record only allowlisted codes in existing error/failed-step fields: `MODEL_OUTPUT_INCOMPLETE`, `MODEL_OUTPUT_EMPTY`, `MODEL_OUTPUT_INVALID`, `MODEL_TIMEOUT`, `MODEL_AUTH_FAILED`, `MODEL_RATE_LIMITED`, `MODEL_PROVIDER_ERROR`, or generic `MODEL_UNAVAILABLE`. These omit provider messages and rejected content. Each failed request counts against the allowance and stops that attempt without payment. Diagnose before authorizing another small test; never retry automatically or weaken schema validation to turn a failure into success. Earlier generic errors cannot be reclassified from discarded responses.
 
 Uploads remain untrusted: 5 MB, 20 PDF pages, 200,000 text-layer characters, 20 million image pixels. Only two PDF pages are rendered; later pages trigger a guarded refusal. Hidden text stays out of the first vision request; the deliberately naive path receives the text layer. Uploaded URLs are never fetched.
 
