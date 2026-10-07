@@ -18,7 +18,7 @@ The rules bound spending authority. They do **not** prove an invoice is genuine:
 | Agent reputation | Public evidence-backed reputation API | Frontend integration in Ledger/Controls |
 | Bounty and evaluation | Submission API and offline evaluation tooling | Approved public launch, real attack collection and paid held-out evaluation |
 
-The frontend supports mock mode and the implemented local API. Browser API checks used simulated AI/chain adapters; separate read-only checks verified the deployed testnet vault. There is no publicly deployed application link yet. The existing VPS page is only a connectivity check. See the [full backend overview](docs/BACKEND_STATUS.md) and [current progress](docs/PROGRESS.md) for evidence and remaining work.
+The frontend supports mock mode and the implemented local API. Browser API checks used simulated AI/chain adapters; separate read-only checks verified the deployed testnet vault. The [HTTPS preview](https://139-180-194-19.sslip.io/#/ledger) now serves the real backend and frontend on testnet. It is read-only: paid AI processing, transaction submission and public bounty admission are disabled. See the [full backend overview](docs/BACKEND_STATUS.md) and [current progress](docs/PROGRESS.md) for evidence and remaining work.
 
 ## Try the frontend
 

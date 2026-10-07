@@ -2,6 +2,8 @@
 
 Frontend/UI/UX belongs to the team. This release changes no files under `frontend/`. Existing HTTP response shapes remain compatible with `frontend/src/api/types.ts`. Backend-only proposal fields such as `amount_base` are private and filtered from those responses.
 
+Read-only deployed preview: [Ledger](https://139-180-194-19.sslip.io/#/ledger), [API config](https://139-180-194-19.sslip.io/api/config), [reputation](https://139-180-194-19.sslip.io/api/reputation). Paid processing is closed; the preview does not consume model credit.
+
 ## Existing contract
 
 - Public reads: `/api/health`, `/api/config`, `/api/registry`, `/api/stats`, `/api/leaderboard`, `/api/ledger`, `/api/eval`, `/api/attempts/{id}`.

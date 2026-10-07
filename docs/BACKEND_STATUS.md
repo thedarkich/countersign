@@ -1,6 +1,6 @@
 # Backend launch status — 7 October 2026
 
-The backend can process an invoice end to end on BOT testnet. A real Qwen Flash rehearsal paid 0.05 tUSDT to a registered vendor and returned a verified receipt. The application is being packaged for a read-only HTTPS testnet preview; full public bounty/mainnet launch gates remain below. The frontend team owns all UI/UX work.
+The backend can process an invoice end to end on BOT testnet. A real Qwen Flash rehearsal paid 0.05 tUSDT to a registered vendor and returned a verified receipt. The [read-only HTTPS testnet preview](https://139-180-194-19.sslip.io/#/ledger) is deployed and verified; full public bounty/mainnet launch gates remain below. The frontend team owns all UI/UX work.
 
 ## What is implemented
 
@@ -14,7 +14,7 @@ The backend can process an invoice end to end on BOT testnet. A real Qwen Flash 
 | Reputation | Public `/api/reputation`; chain/vault/address identity, source/scenario/model/guard breakdowns, evidence links and coverage/staleness | Frontend team integrates the additive route in Ledger/Controls; see handoff |
 | Rehearsal tooling | Generator produces 20 clean + 20 clean holdout + 24 poisoned PDF/image fixtures; active run manifest; run/batch/seed CLI | Attack reliability unvalidated; clean batch and seed runs require a larger authorized AI allowance |
 | Evaluation | Grouped 60/40 split, seed 42; separate clean holdout; training-only v2 examples; offline rules/guard comparison, counts/Wilson intervals and conditional promotion eligibility | Collect eligible attacks, authorize paid evaluation, run heldout once, report real results; live guard stays v1 |
-| Operations | Locked Docker image, non-root runtime, Compose/Caddy, persistent data path, health/readiness separation, private SQLite backup command | Public HTTPS preview verification and then final launch gates |
+| Operations | Locked Docker image, non-root runtime, Compose/Caddy, persistent data path, health/readiness separation, private SQLite backup command | Final launch gates below; HTTPS preview and backup/restart checks passed |
 
 ## Verified evidence
 
@@ -22,6 +22,7 @@ The backend can process an invoice end to end on BOT testnet. A real Qwen Flash 
 - Live **clean Chinese invoice**: two Qwen Flash calls, no retries, 0.05 tUSDT paid. [Confirmed receipt](https://scan.bohr.life/tx/0x69ab3f76a936ba4543fdd0f7f9dec6825580500b1f6ba4d66b1917ee8372f357). This proves one clean flow; it does not prove attack catch rates or average latency.
 - Pipeline latency was **47,503 ms**. Recorded stages: extraction 11.93 s, matching 2.05 s, guard 8.90 s, chain 4.77 s; initial registry reads account for most remaining time. RPC and model latency need more work before promising fast responses.
 - Read-only historical discovery verified **21 vault events** through block **25971526** in the initial probe. The isolated VPS container served registry/ledger/reputation and the built frontend; private routes rejected unauthenticated requests and public submission returned 503 while closed.
+- Public HTTPS verification passed: chain 968, three vendors, 19.85 tUSDT vault balance, 21 displayed ledger events including the live AI receipt, two reputation identities, fresh coverage, 401 for unauthenticated team access and 503 for closed bounty admission. A verified SQLite backup and controlled restart retained all displayed receipts. The health endpoint correctly reports AI/transactions/bounty disabled.
 - The generator passed ingestion checks for all 64 fixtures. All `stage` flags remain false. Run `LAUNCH1` has one paid invoice: generate a fresh run ID before a full batch; never reuse paid invoice numbers.
 - Evaluation planning reports **0 eligible train attacks, 0 held-out attacks, 20 held-out clean**. No paid evaluation ran, no score was invented, and no v2 prompt was activated.
 - Existing **92 contract tests** passed at the earlier contract milestone; contract code is unchanged by this backend release.
@@ -37,7 +38,7 @@ The `money_lost` field measures outflow outside registered payout addresses, not
 1. **Real attack and batch rehearsal:** validate chosen stage attacks, test both agent paths, run the 20 clean invoices, and review actual latency. The current ~$2 account allowance authorizes only small tests, not unattended batches, public AI traffic or evaluation.
 2. **Mainnet:** fund BOT, deploy, and have the human owner complete setup/signatures. Team screens/stage demo must use mainnet for final track acceptance; the preview is explicitly testnet. Sponsored gas remains unconfirmed, so use self-funded gas.
 3. **Public bounty:** obtain organizer permission and a funded operating allowance before enabling admission. Testnet is the configured bounty fallback; public-event permission is still required.
-4. **Production configuration:** install only the required agent/provider credentials on the VPS privately, verify admin/privacy settings, and enable each runtime switch only for its authorized workload. No mainnet owner key belongs on the server.
+4. **Production configuration:** install only the required agent/provider credentials on the VPS privately, preserve the generated admin/privacy settings, and enable each runtime switch only for its authorized workload. No mainnet owner key belongs on the server.
 5. **Team integration and device check:** connect the reputation display, preserve truthful loss/network/status labels, then test the actual HTTPS application on mobile data and WeChat. Earlier connection-page checks do not count as final app acceptance.
 6. **Learning loop and submission:** collect attacks, perform the fixed held-out comparison once, keep v1 unless v2 catches more without more false alarms, and finish evidence/video/team/license/submission details. The separate Sepolia/Public Good lane remains optional.
 
