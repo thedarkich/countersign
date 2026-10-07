@@ -20,6 +20,12 @@ Open `http://127.0.0.1:8000/#/ledger`. The API serves the production frontend bu
 
 One process owns each data directory through a file lock. It runs three bounded workers. Startup marks unfinished attempts for review; signed hashes saved before broadcast are reconciled read-only against calldata and canonical receipts. Jobs are never automatically resent. Periodic Blockscout discovery verifies receipts, persists scan coverage and archives replaced evidence on reorg. `/api/reputation` publishes scope/staleness; it does not claim global fraud detection.
 
+## Registry reads
+
+Invoice snapshots and public registry refreshes use bounded JSON-RPC batches, with at most 63 reads plus a fresh chain-ID check per HTTP request. Every value is requested at one pinned block number; the caller checks vault bytecode and rechecks the block hash before returning. Replies are matched by numeric ID, never order, and must have complete identities, valid ABI/quantity data and the expected chain. Response data is capped at 2 MiB per batch. Failed/partial/malformed batches abort the read with sanitized errors; no partial registry, automatic retries or sequential fallback is published. Existing verified-cache freshness rules still apply. Transaction signing remains on its original separate path.
+
+One paired read-only BOT testnet check measured snapshot **19.343 -> 5.164 s** and full state **44.786 -> 8.692 s**, with identical business values. This is not an average or full pipeline measurement. The new regressions cover reordered/bad replies, chunk limits, policy changes after a pinned block, reorg detection, and concurrent reads with a real local legacy payment. Providers must support JSON-RPC batches; check a changed provider before deployment. These checks retain the existing trust in the configured RPC; they are not independent state proofs.
+
 ## Rehearsal commands
 
 Generate without AI calls or transactions; it reads the configured vault and checks PO capacity. Confirm vault funds/daily capacity separately before a paid batch:
@@ -65,7 +71,7 @@ cd ../backend
 uv run --frozen pytest -q integration/
 ```
 
-On 7 October: **151 unit/API tests and 28 isolated Anvil integration tests passed**. Default/local-chain tests use synthetic inputs, temporary databases and mocked models; no project environment, paid calls or public-chain transactions. They cover recovery, canonical receipts, bounded parsing/admission/cost, reputation/privacy and evaluation. `integration/test_http_rehearsal.py` also exercises HTTP uploads through a real local vault: hidden instructions, concurrent/changed-amount duplicates, policy changes during model processing and honest reporting when fake invoices pay approved vendors.
+On 7 October: **174 unit/API tests and 31 isolated Anvil integration tests passed**. Default/local-chain tests use synthetic inputs, temporary databases and mocked models; no project environment, paid calls or public-chain transactions. They cover recovery, canonical receipts, bounded parsing/admission/cost, reputation/privacy and evaluation. `integration/test_http_rehearsal.py` also exercises HTTP uploads through a real local vault: hidden instructions, concurrent/changed-amount duplicates, policy changes during model processing and honest reporting when fake invoices pay approved vendors.
 
 The separate real-model rehearsal used exactly two calls and paid 0.05 tUSDT: [receipt](https://scan.bohr.life/tx/0x69ab3f76a936ba4543fdd0f7f9dec6825580500b1f6ba4d66b1917ee8372f357). Its 47.5-second pipeline time is one measured sample, not a latency guarantee or attack-quality benchmark.
 

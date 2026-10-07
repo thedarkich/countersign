@@ -346,14 +346,24 @@ def test_missing_device_invalid_text_and_magic_bytes(api_system):
 
 def test_rate_limits_persist_and_do_not_share_ip(api_system):
     client, runtime, _, _ = api_system
+    now = [86401]
+
+    def clock():
+        return now[0]
+
+    runtime.limiter.clock = clock
     for _ in range(3):
         assert submit(client).status_code == 202
     response = submit(client)
     assert response.status_code == 429 and set(response.json()) == {"message_en", "message_zh"}
     with pytest.raises(Exception) as exc:
-        RateLimiter(runtime.store.engine, runtime.settings).reserve(DEVICE["X-Device-Id"], "Tester")
+        RateLimiter(runtime.store.engine, runtime.settings, clock=clock).reserve(
+            DEVICE["X-Device-Id"], "Tester"
+        )
     assert exc.value.status_code == 429
     assert submit(client, headers={"X-Device-Id": str(uuid4())}).status_code == 202
+    now[0] += 60
+    assert submit(client).status_code == 202
 
 
 def test_atomic_nickname_and_global_limits(api_system):

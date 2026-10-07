@@ -8,6 +8,7 @@ from eth_utils import to_hex
 from app.chain.client import TOKEN_ABI, ZERO
 from app.chain.errors import ChainSendError
 from app.chain.indexer import decode_receipt, save_events
+from app.chain.reads import PinnedReads, balance_read, contract_read
 from app.pipeline.agents import human_amount
 
 KINDS = ("AddVendor", "SetPayout", "AddPO", "AddAgent", "RaiseDailyCap", "Unpause", "Withdraw")
@@ -43,17 +44,39 @@ def read_state(vault, network, settings):
     if not w3.eth.get_code(contract.address, block_identifier=number):
         raise ChainSendError("Configured vault has no code")
 
-    def read(name, *args):
-        return getattr(contract.functions, name)(*args).call(
-            block_identifier=number, ccip_read_enabled=False
-        )
+    with PinnedReads(w3.provider.endpoint_uri, number, client.chain_id) as reads:
+        state = _read_pinned(vault, client, settings, network, block, reads)
+    if w3.eth.get_block(number)["hash"] != block["hash"]:
+        raise ChainSendError("State block changed while reading")
+    return state
 
-    asset = read("token")
+
+def _read_pinned(vault, client, settings, network, block, reads):
+    w3, contract = client.w3, client.contract
+    base = reads.many(
+        {
+            name: contract_read(contract, name)
+            for name in (
+                "token",
+                "owner",
+                "delay",
+                "dailyCap",
+                "remainingToday",
+                "vaultBalance",
+                "paused",
+                "changeCount",
+            )
+        }
+    )
+    count = base["changeCount"]
+    if count > 1000:
+        raise ChainSendError("Change history exceeds demo sync bound")
+    asset = w3.to_checksum_address(base["token"])
     decimals, symbol = 18, "BOT"
     if asset.lower() != ZERO:
         token = w3.eth.contract(address=asset, abi=TOKEN_ABI)
-        decimals = token.functions.decimals().call(block_identifier=number, ccip_read_enabled=False)
-        symbol = token.functions.symbol().call(block_identifier=number, ccip_read_enabled=False)
+        metadata = reads.many({name: contract_read(token, name) for name in ("decimals", "symbol")})
+        decimals, symbol = metadata["decimals"], metadata["symbol"]
     if not 0 <= decimals <= 77 or not symbol:
         raise ChainSendError("Unsupported token metadata")
 
@@ -65,12 +88,11 @@ def read_state(vault, network, settings):
     vendor_ids, po_ids = set(names), set(refs)
     agent_addresses = {address.lower(): label for label, address in vault.addresses.items()}
     pending = []
-    count = read("changeCount")
-    if count > 1000:
-        raise ChainSendError("Change history exceeds demo sync bound")
+    ids = reads.many({i: contract_read(contract, "changeIds", i) for i in range(count)})
+    changes = reads.many({i: contract_read(contract, "getChange", ids[i]) for i in range(count)})
     for i in range(count):
-        change_id = read("changeIds", i)
-        kind, data, eta, executed, cancelled = read("getChange", change_id)
+        change_id = ids[i]
+        kind, data, eta, executed, cancelled = changes[i]
         if kind >= len(KINDS):
             raise ChainSendError("Unknown change kind")
         values = dict(zip(CHANGE_FIELDS[kind], decode(CHANGE_TYPES[kind], data), strict=True))
@@ -96,22 +118,31 @@ def read_state(vault, network, settings):
                 "ready": block["timestamp"] >= eta,
             }
         )
+    operations = {("vendor", v): contract_read(contract, "vendors", v) for v in vendor_ids}
+    for po_id in po_ids:
+        operations[("po", po_id)] = contract_read(contract, "pos", po_id)
+        operations[("remaining", po_id)] = contract_read(contract, "poRemaining", po_id)
+    for address in agent_addresses:
+        checksum = w3.to_checksum_address(address)
+        operations[("active", address)] = contract_read(contract, "isAgent", checksum)
+        operations[("balance", address)] = balance_read(checksum)
+    values = reads.many(operations)
     vendors, pos = [], []
     for vendor_id in sorted(vendor_ids):
-        payout, active, exists = read("vendors", vendor_id)
+        payout, active, exists = values[("vendor", vendor_id)]
         if exists:
             name = names.get(vendor_id, {})
             vendors.append(
                 {
                     "id": vendor_id,
-                    "payout": payout,
+                    "payout": w3.to_checksum_address(payout),
                     "active": active,
                     "name_en": name.get("name_en", f"Vendor {vendor_id}"),
                     "name_zh": name.get("name_zh", f"供应商 {vendor_id}"),
                 }
             )
     for po_id in sorted(po_ids):
-        vendor_id, cap, _, expiry, period, _, exists, closed = read("pos", po_id)
+        vendor_id, cap, _, expiry, period, _, exists, closed = values[("po", po_id)]
         if exists:
             pos.append(
                 {
@@ -119,7 +150,7 @@ def read_state(vault, network, settings):
                     "ref": refs.get(po_id, f"PO-{po_id}"),
                     "vendor_id": vendor_id,
                     "cap": money(cap),
-                    "remaining": money(read("poRemaining", po_id)),
+                    "remaining": money(values[("remaining", po_id)]),
                     "expiry": iso(expiry),
                     "period_days": period,
                     "closed": closed,
@@ -132,8 +163,8 @@ def read_state(vault, network, settings):
             {
                 "address": checksum,
                 "label": label,
-                "active": read("isAgent", checksum),
-                "balance": human_amount(w3.eth.get_balance(checksum, block_identifier=number), 18),
+                "active": values[("active", address)],
+                "balance": human_amount(values[("balance", address)], 18),
                 "gas": "self",
             }
         )
@@ -145,10 +176,10 @@ def read_state(vault, network, settings):
         "explorer_url": client.explorer_url,
         "contract_address": contract.address,
         "token": {"address": asset, "symbol": symbol, "decimals": decimals},
-        "owner_address": read("owner"),
+        "owner_address": w3.to_checksum_address(base["owner"]),
         "agents": dict(vault.addresses),
         "public_base_url": settings.public_base_url,
-        "timelock_seconds": read("delay"),
+        "timelock_seconds": base["delay"],
         "bounty_network": settings.bounty_network,
     }
     registry = {
@@ -156,17 +187,15 @@ def read_state(vault, network, settings):
         "pos": pos,
         "pending_changes": pending,
         "agents": agents,
-        "daily_cap": money(read("dailyCap")),
-        "remaining_today": money(read("remainingToday")),
-        "vault_balance": money(read("vaultBalance")),
-        "paused": read("paused"),
+        "daily_cap": money(base["dailyCap"]),
+        "remaining_today": money(base["remainingToday"]),
+        "vault_balance": money(base["vaultBalance"]),
+        "paused": base["paused"],
     }
-    if w3.eth.get_block(number)["hash"] != block["hash"]:
-        raise ChainSendError("State block changed while reading")
     return {
         "config": config,
         "registry": registry,
-        "block_number": number,
+        "block_number": block["number"],
         "block_time": iso(block["timestamp"]),
     }
 

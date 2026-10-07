@@ -8,6 +8,7 @@ from web3 import HTTPProvider, Web3
 from web3.middleware import ExtraDataToPOAMiddleware
 
 from app.chain.errors import ChainSendError
+from app.chain.reads import PinnedReads, contract_read
 from app.chain.tx_writer import TransactionWriter
 from app.pipeline.match import PurchaseOrder, Vendor
 from app.pipeline.runner import RegistrySnapshot
@@ -113,37 +114,49 @@ class VaultClient:
         if not w3.eth.get_code(contract.address, block_identifier=block):
             raise ChainSendError("Configured vault has no bytecode")
 
-        def read(name, *args):
-            return getattr(contract.functions, name)(*args).call(
-                block_identifier=block, ccip_read_enabled=False
-            )
-
-        vendors = []
-        for item in self.vendor_names:
-            payout, _active, exists = read("vendors", item["id"])
-            if exists:
-                vendors.append(
-                    Vendor(
-                        item["id"], item["name_en"], item["name_zh"], tuple(item["aliases"]), payout
-                    )
+        with PinnedReads(w3.provider.endpoint_uri, block, client.chain_id) as reads:
+            operations = {"token": contract_read(contract, "token")}
+            for item in self.vendor_names:
+                operations[("vendor", item["id"])] = contract_read(contract, "vendors", item["id"])
+            for item in self.po_names:
+                operations[("po", item["po_id"])] = contract_read(contract, "pos", item["po_id"])
+                operations[("remaining", item["po_id"])] = contract_read(
+                    contract, "poRemaining", item["po_id"]
                 )
-        pos = []
-        for item in self.po_names:
-            record = read("pos", item["po_id"])
-            if record[6]:
-                pos.append(
-                    PurchaseOrder(
-                        item["po_id"], item["ref"], record[0], read("poRemaining", item["po_id"])
+            values = reads.many(operations)
+            vendors = []
+            for item in self.vendor_names:
+                payout, _active, exists = values[("vendor", item["id"])]
+                if exists:
+                    vendors.append(
+                        Vendor(
+                            item["id"],
+                            item["name_en"],
+                            item["name_zh"],
+                            tuple(item["aliases"]),
+                            to_checksum_address(payout),
+                        )
                     )
+            pos = []
+            for item in self.po_names:
+                record = values[("po", item["po_id"])]
+                if record[6]:
+                    pos.append(
+                        PurchaseOrder(
+                            item["po_id"],
+                            item["ref"],
+                            record[0],
+                            values[("remaining", item["po_id"])],
+                        )
+                    )
+            asset = to_checksum_address(values["token"])
+            decimals, symbol = 18, "BOT"
+            if asset.lower() != ZERO:
+                token = w3.eth.contract(address=asset, abi=TOKEN_ABI)
+                metadata = reads.many(
+                    {name: contract_read(token, name) for name in ("decimals", "symbol")}
                 )
-        asset = read("token")
-        decimals, symbol = 18, "BOT"
-        if asset.lower() != ZERO:
-            token = w3.eth.contract(address=asset, abi=TOKEN_ABI)
-            decimals = token.functions.decimals().call(
-                block_identifier=block, ccip_read_enabled=False
-            )
-            symbol = token.functions.symbol().call(block_identifier=block, ccip_read_enabled=False)
+                decimals, symbol = metadata["decimals"], metadata["symbol"]
         if not 0 <= decimals <= 77 or not symbol:
             raise ChainSendError("Unsupported vault asset metadata")
         if w3.eth.get_block(block)["hash"] != pinned["hash"]:
