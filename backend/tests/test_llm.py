@@ -97,6 +97,16 @@ def test_parse_error_is_not_retried():
     assert len(requests) == 1
 
 
+def test_rejected_output_logs_shape_without_content(caplog):
+    def handler(request):
+        return response('{"verdict": "pay", "private": "invoice text 0xSECRET"}')
+
+    with caplog.at_level("WARNING", logger="app.llm"), pytest.raises(ModelUnavailable):
+        asyncio.run(invoke(make_gateway(handler, enabled=True)))
+    assert "GuardVerdict" in caplog.text and "extra_forbidden" in caplog.text
+    assert "0xSECRET" not in caplog.text and "invoice text" not in caplog.text
+
+
 def test_hourly_limit_reserves_concurrent_calls_and_rolls():
     now = [10000.0]
     requests = []

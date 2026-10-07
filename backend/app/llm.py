@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import json
+import logging
 import time
 from collections import deque
 from collections.abc import Callable
@@ -175,8 +176,22 @@ class ModelGateway:
             if not isinstance(payload, str):
                 raise TypeError("Invalid content envelope")
             return schema.model_validate_json(payload)
-        except (ValidationError, AttributeError, TypeError):
-            # Never retain the provider body, validation input or raw exception.
+        except (ValidationError, AttributeError, TypeError) as exc:
+            # Never retain the provider body, validation input or raw exception. Error types and
+            # field names only, so intermittent schema failures can be told apart in the logs.
+            shape = (
+                sorted(
+                    {
+                        (str(e["loc"][0]) if e["loc"] else "-") + ":" + e["type"]
+                        for e in exc.errors()
+                    }
+                )
+                if isinstance(exc, ValidationError)
+                else type(exc).__name__
+            )
+            logging.getLogger(__name__).warning(
+                "Model output rejected: %s %s", schema.__name__, shape
+            )
             raise ModelUnavailable(
                 "Model output did not match the required schema.", code="MODEL_OUTPUT_INVALID"
             ) from None

@@ -47,7 +47,7 @@ export function Decision({ attempt: a, symbol }: { attempt: Attempt; symbol: str
   if (!done) agentLine = tr('Reading the invoice…', '正在读取发票…')
   else if (a.outcome === 'no_invoice') agentLine = tr('Not an invoice, so there is nothing to pay.', '这不是发票，没有需要付款的内容。')
   else if (a.outcome === 'refused') agentLine = tr('Refused. It did not propose a payment.', '拒绝了，没有提出付款。')
-  else if (a.status === 'error') agentLine = tr('Stopped before making a proposal.', '提出付款前就停止了。')
+  else if (a.status === 'error') agentLine = tr('Stopped before making a proposal. Nothing was paid, so it is safe to send again.', '提出付款前就停止了。没有付款，可以重新发送。')
   else if (a.agent === 'naive') agentLine = tr('Proposed what the invoice says, without review.', '照发票原样提出付款，没有审核。')
   else agentLine = tr('Checked the invoice and proposed a payment.', '检查了发票，提出付款。')
 
