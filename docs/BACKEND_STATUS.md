@@ -27,7 +27,7 @@ The backend can process an invoice end to end on BOT testnet. A real Qwen Flash 
 - Evaluation planning reports **0 eligible train attacks, 0 held-out attacks, 20 held-out clean**. No paid evaluation ran, no score was invented, and no v2 prompt was activated.
 - Existing **92 contract tests** passed at the earlier contract milestone; contract code is unchanged by this backend release.
 
-The [focused backend security review](security/BACKEND_REVIEW.md) records three fixed resource/cost-control gaps and their remaining boundaries. No new paid tests were required.
+The [focused backend security review](security/BACKEND_REVIEW.md) records three fixed resource/cost-control gaps and their remaining boundaries. No new paid tests were required. Security image `ffa05c4` is deployed and healthy. HTTPS checks retained all 21 displayed receipts; a controlled slow upload returned 408 after 15.2 seconds while reads stayed available. AI, transaction, bounty and batch admission remain disabled.
 
 ## API handoff
 

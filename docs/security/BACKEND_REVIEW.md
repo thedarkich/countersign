@@ -6,7 +6,7 @@ Scope: the invoice upload boundary, native document parsing, and AI call account
 
 ### CS-BE-01 — Native parser failure could disrupt payment processing
 
-- **Rule:** FASTAPI-FILE-001 / untrusted upload resource isolation. **Severity:** High when invoice admission is enabled; the current public preview has admission disabled.
+- **Rule:** FASTAPI-UPLOAD-001 / untrusted upload resource isolation. **Severity:** High when invoice admission is enabled; the current public preview has admission disabled.
 - **Location/evidence before fix:** `backend/app/api/runtime.py`, `Runtime.ingest`, used `await asyncio.to_thread(ingest_bytes, data)`. `pipeline/ingest.py` loads native PyMuPDF/Pillow in that process. File/page/pixel bounds existed, but no parser CPU/address-space/wall limit. Cancelling an asyncio thread task does not stop native work; a native crash can terminate the API process.
 - **Fix:** API, operator CLI and evaluation parse files in a fresh Linux interpreter. Each file has 384 MiB address-space, 6 CPU-second, 12 wall-second and 24 MiB serialized-result limits; core dumps and regular-file growth are disabled with resource limits. At most two API parsers run simultaneously. The parent bounds stdout, validates JSON, and kills/reaps the process group on timeout, failure or cancellation. No shell, pickle, inherited application environment or uploaded filename is used to start the child.
 - **Evidence:** actual subprocess tests cover malformed files, crash, excessive allocation using the production limit function, timeout, oversized output and cancellation. PDF/JPEG success and white/tiny/off-page injection evidence are verified after serialization. Existing ingestion/guard tests remain green.
@@ -14,7 +14,7 @@ Scope: the invoice upload boundary, native document parsing, and AI call account
 
 ### CS-BE-02 — Slow bodies and concurrent uploads could retain resources
 
-- **Rule:** FASTAPI-FILE-001 / bounded request resource use. **Severity:** Medium.
+- **Rule:** FASTAPI-UPLOAD-001 / bounded request resource use. **Severity:** Medium.
 - **Location/evidence before fix:** `backend/app/api/security.py`, `RequestBoundary.__call__`, buffered POST/PUT/PATCH bodies with `await receive()` until completion. The byte cap existed, but there was no complete-body deadline or admission count. The Caddy configuration showed a size cap, not these application controls.
 - **Fix:** one 15-second deadline covers the entire body, including chunked requests; drip-fed chunks cannot reset it. At most eight modifying requests are admitted at once, held through processing so completed bodies waiting for parser/RPC work remain bounded. Overload returns bilingual 503, timeout 408, oversized input 413; all retain no-store/security headers. Cancellation/disconnection releases capacity. GET requests do not consume upload slots.
 - **Evidence:** tests exercise slow chunk streams, overload before body read, cancellation, subsequent capacity reuse, chunked over-size rejection, and GET access during upload saturation.
@@ -36,6 +36,6 @@ Fabricated invoices can still pay approved vendors within approved budgets. Repu
 
 ## Validation and deployment
 
-Regression commands: `ruff check app tests integration ../scripts/make_invoices.py ../scripts/configure_wallets.py`, `pytest -q`, and `pytest -q integration/` from `backend/`. All tests use mocked models and disposable/local-chain accounts. No paid model calls or public-chain writes are needed for this patch. Current pass counts and deployment results are recorded in `docs/PROGRESS.md`.
+Regression commands: `ruff check app tests integration ../scripts/make_invoices.py ../scripts/configure_wallets.py`, `pytest -q`, and `pytest -q integration/` from `backend/`. All tests use mocked models and disposable/local-chain accounts. No paid model calls or public-chain writes are needed for this patch. **126 unit/API tests and 19 isolated Anvil integration tests pass**, with Ruff clean. Image `ffa05c4` is deployed and healthy after a verified private backup. A network-disabled Docker smoke verified parser success/rejection and persistent budget exhaustion; public HTTPS retained all 21 displayed receipts, rejects unauthorized/closed submissions, and returned 408 after 15.2 seconds for one controlled incomplete upload while a concurrent health read passed. Full deployment evidence is recorded in `docs/PROGRESS.md`.
 
 Reference guidance: [OWASP file upload controls](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html), [Python subprocess lifecycle](https://docs.python.org/3.11/library/asyncio-subprocess.html), [Linux/Python resource limits](https://docs.python.org/3.11/library/resource.html). The subprocess stream buffer setting alone is not an output-size limit; the parent explicitly counts output bytes.
