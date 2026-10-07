@@ -12,12 +12,15 @@ html { scroll-padding-top: 24px; }
 .site-actions [aria-pressed=true] { background: var(--accent-wash); color: var(--action); }
 .site-signin { color: var(--ink-2); font-size: 14px; font-weight: 600; }
 .site-signin:hover { color: var(--action); }
-.site-button { display: inline-flex; align-items: center; justify-content: center; gap: 16px; padding: 11px 18px; border: 1px solid var(--action); border-radius: 9px; background: var(--action); color: var(--action-ink); font-size: 14px; font-weight: 650; line-height: 1.35; transition: filter .15s, transform .15s; text-decoration: none; white-space: nowrap; }
-.site-button:hover { filter: brightness(1.08); }
-.site-button:active { transform: translateY(1px); }
-.site-button span[aria-hidden] { font-size: 20px; font-weight: 400; line-height: 1; }
+.site-button { display: inline-flex; align-items: center; justify-content: center; gap: 16px; padding: 11px 18px; border: 1px solid var(--action); border-radius: 9px; background: var(--action); color: var(--action-ink); font-size: 14px; font-weight: 650; line-height: 1.35; transition: background .18s ease, filter .18s ease, box-shadow .18s ease, transform .18s ease; text-decoration: none; white-space: nowrap; }
+.site-button:hover { filter: brightness(1.08); box-shadow: 0 12px 26px color-mix(in srgb, var(--action) 28%, transparent); transform: translateY(-1px); }
+.site-button:active { transform: translateY(1px); box-shadow: 0 4px 12px color-mix(in srgb, var(--action) 20%, transparent); }
+.site-button span[aria-hidden] { display: inline-block; font-size: 20px; font-weight: 400; line-height: 1; transition: transform .18s ease; }
+.site-button:hover span[aria-hidden] { transform: translate(3px); }
 .site-button.secondary { color: var(--ink); background: var(--field); border-color: var(--rule-strong); box-shadow: 0 1px 2px var(--shadow); }
-.site-button:disabled { opacity: .55; cursor: wait; }
+.site-button.secondary:not(:disabled):hover { background: var(--paper-2); box-shadow: 0 6px 16px var(--shadow); transform: translateY(-1px); }
+.site-button.secondary:not(:disabled):active { transform: translateY(1px); box-shadow: 0 1px 2px var(--shadow); }
+.site-button:disabled { opacity: .55; cursor: wait; box-shadow: none; transform: none; }
 .site-subbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 59px; }
 .site-subbar nav { display: flex; gap: 30px; min-width: 0; overflow-x: auto; }
 .site-subbar nav a { font-size: 14px; color: var(--ink-2); white-space: nowrap; padding: 14px 0; border-bottom: 2px solid transparent; }
@@ -122,8 +125,13 @@ html { scroll-padding-top: 24px; }
 .page-content > .metric-grid { gap: 18px; }
 .metric-card { background: var(--sheet); box-shadow: 0 4px 14px var(--shadow); }
 .panel-heading { background: var(--sheet); }
-.btn-ink { background: var(--action); border-color: var(--action); color: var(--action-ink); }
+.btn-ink { background: var(--action); border-color: var(--action); color: var(--action-ink); transition: background-color .18s ease, color .18s ease, filter .18s ease, box-shadow .18s ease, transform .18s ease; }
 .btn-ink:hover { background: var(--action); filter: brightness(1.08); }
+.btn-ink:not(:disabled):hover { box-shadow: 0 12px 26px color-mix(in srgb, var(--action) 28%, transparent); transform: translateY(-1px); }
+/* Scroll-reveal (Linear style) and magnetic button (Aceternity style) */
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s cubic-bezier(.22,.61,.36,1), transform .7s cubic-bezier(.22,.61,.36,1); transition-delay: var(--reveal-delay, 0ms); will-change: opacity, transform; }
+.reveal.revealed { opacity: 1; transform: none; }
+.magnetic { display: inline-flex; will-change: transform; transition: transform .18s ease; }
 @media (max-width: 1000px) {
   .hero-card { gap: 26px; padding: 32px 28px; }
   .hero-copy h1 { font-size: 35px; }
@@ -185,4 +193,6 @@ html { scroll-padding-top: 24px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+  .reveal { opacity: 1; transform: none; }
+  .magnetic { transform: none !important; }
 }

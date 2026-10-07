@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useLang } from '../i18n'
 import { SiteHeader, SiteFooter } from '../components/SiteChrome'
@@ -6,6 +6,47 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { UsersRound, FileText, ArrowLeftRight, ChartNoAxesColumn, Copy, Check } from 'lucide-react'
 import '../landing.css'
+
+/** Fades `.reveal` elements in as they scroll into view, then hands them back to their own styles (hover lifts, transitions). */
+function useReveal() {
+  useEffect(() => {
+    const els = Array.from(document.querySelectorAll<HTMLElement>('.reveal'))
+    if (!els.length) return
+    const timers: number[] = []
+    const show = (el: HTMLElement) => {
+      el.classList.add('revealed')
+      const delay = parseFloat(el.style.getPropertyValue('--reveal-delay')) || 0
+      timers.push(window.setTimeout(() => el.classList.remove('reveal', 'revealed'), delay + 800))
+    }
+    // no observer (older in-app browsers): show everything rather than leave it invisible
+    if (!('IntersectionObserver' in window)) {
+      els.forEach(show)
+      return () => timers.forEach(clearTimeout)
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) { show(e.target as HTMLElement); io.unobserve(e.target) }
+      })
+    }, { threshold: 0.12 })
+    els.forEach((el) => io.observe(el))
+    return () => { io.disconnect(); timers.forEach(clearTimeout) }
+  }, [])
+}
+
+/** Pulls a call-to-action a few pixels toward the mouse. Touch input is ignored so a tap never leaves it offset. */
+function Magnetic({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  function onMove(e: React.PointerEvent) {
+    const el = ref.current
+    if (!el || e.pointerType !== 'mouse') return
+    const r = el.getBoundingClientRect()
+    const x = (e.clientX - r.left - r.width / 2) / (r.width / 2)
+    const y = (e.clientY - r.top - r.height / 2) / (r.height / 2)
+    el.style.transform = `translate(${x * 5}px, ${y * 5}px)`
+  }
+  function reset() { const el = ref.current; if (el) el.style.transform = '' }
+  return <div ref={ref} className="magnetic" onPointerMove={onMove} onPointerLeave={reset}>{children}</div>
+}
 
 export default function LandingPage() {
   const { tr } = useLang()
@@ -15,6 +56,7 @@ export default function LandingPage() {
   const [demo, setDemo] = useState<'request' | 'rules' | 'receipt'>('request')
   const [copied, setCopied] = useState(false)
   const sample = JSON.stringify({ vendorId: 7, poId: 101, amount: '100', invoice: 'INV-001' })
+  useReveal()
   useEffect(() => {
     document.title = 'Countersign · ' + tr('Your rules. Every payment.', '每笔付款，遵循你的规则。')
     const section = params.get('section')
@@ -29,14 +71,14 @@ export default function LandingPage() {
   ]
   return <div className="public-site landing-page"><SiteHeader landing />
     <main className="landing-main" id="main-content" tabIndex={-1}>
-      <div className="campaign-strip"><span className="mono-label">◆ {preview}</span><strong><span>{tr('Your rules. Every payment.', '每笔付款，遵循你的规则。')}</span> {tr('— a workspace for agents and their payments.', '— 为 Agent 准备的付款工作台。')}</strong><Link to="/login" className="site-button">{tr('Get started', '开始使用')} <span aria-hidden>→</span></Link></div>
-      <section className="hero-card">
-        <div className="hero-copy"><p className="mono-label">// {tr('HAVE AN AGENT', '让 AGENT 开始工作')}</p>
-          <h1>{tr('Give agents', '让 Agent 放手工作，')}<br /><span>{tr('payment boundaries.', '让每笔付款有边界。')}</span></h1>
-          <p>{tr('A security workspace for AI invoice payments. Register suppliers, approve purchase orders and set budgets. The vault checks each request before money moves.', '为 AI 发票付款提供安全工作台。登记供应商、批准采购单、设置预算。每次请求，都由金库先检查，再决定是否付款。')}</p>
-          <div className="hero-actions"><Link to="/ledger" className="site-button">{tr('View live ledger', '查看实时账本')} <span aria-hidden>→</span></Link><Link to="/login" className="site-button secondary">{tr('Quickstart', '快速开始')}</Link></div>
+      <div className="campaign-strip reveal"><span className="mono-label">◆ {preview}</span><strong><span>{tr('Your rules. Every payment.', '每笔付款，遵循你的规则。')}</span> {tr('— a workspace for agents and their payments.', '— 为 Agent 准备的付款工作台。')}</strong><Link to="/login" className="site-button">{tr('Get started', '开始使用')} <span aria-hidden>→</span></Link></div>
+      <section className="hero-card reveal" style={{ ['--reveal-delay' as string]: '60ms' }}>
+        <div className="hero-copy reveal" style={{ ['--reveal-delay' as string]: '120ms' }}><p className="mono-label">// {tr('HAVE AN AGENT', '让 AGENT 开始工作')}</p>
+          <h1>{tr('AI checks the invoice.', 'AI 审票。')}<br /><span>{tr('The contract calls the shots.', '合约拍板。')}</span></h1>
+          <p>{tr('AI checks invoices. Your contract enforces your payment rules.', 'AI 检查发票，智能合约按你设定的规则放行或拒付。')}</p>
+          <div className="hero-actions"><Magnetic><Link to="/ledger" className="site-button">{tr('View live ledger', '查看实时账本')} <span aria-hidden>→</span></Link></Magnetic><Link to="/login" className="site-button secondary">{tr('Quickstart', '快速开始')}</Link></div>
         </div>
-        <div className="hero-demo"><p className="mono-label">◆ {tr('ONE PAYMENT FLOW — PICK A STEP', '一笔付款的流程 — 选择一个步骤')}</p>
+        <div className="hero-demo reveal" style={{ ['--reveal-delay' as string]: '240ms' }}><p className="mono-label">◆ {tr('ONE PAYMENT FLOW — PICK A STEP', '一笔付款的流程 — 选择一个步骤')}</p>
           <div className="demo-options" role="group" aria-label={tr('Payment demonstration steps', '付款演示步骤')}>
             {(['request', 'rules', 'receipt'] as const).map((v, i) => <button key={v} aria-pressed={demo === v} onClick={() => { setDemo(v); setCopied(false) }}>{['↗', '◇', '✓'][i]} {v === 'request' ? tr('Request', '付款请求') : v === 'rules' ? tr('Rules', '规则检查') : tr('Receipt', '执行回执')}</button>)}
           </div>
@@ -51,9 +93,9 @@ export default function LandingPage() {
           <p className="demo-caption">{tr('Illustrative example · No transaction is sent here. Live results are in the ledger.', '流程示例 · 此处不发送交易。真实结果见账本。')}</p>
         </div>
       </section>
-      <section className="launch-card" id="workflow"><div><p className="mono-label">// {tr('NEED A PAYMENT WORKSPACE', '准备好你的付款工作台')}</p><h2>{tr('Open your workspace.', '进入你的工作台。')}</h2><p>{tr('Team access connects invoices, agent decisions and payment records. Everyone can inspect the public ledger and agent history.', '团队工作台连接发票、Agent 决策与付款记录。所有人都能查看公开账本和 Agent 历史。')}</p></div><Link to="/inbox" className="site-button">{tr('Open workspace', '进入工作台')} <span aria-hidden>→</span></Link></section>
-      <section className="stack-section" id="stack"><p className="mono-label">// {tr('BUILDING BLOCKS', '核心能力')}</p><h2>{tr('Explore the', '探索你的')} <span>{tr('workspace.', '付款工作台。')}</span></h2><p className="section-copy">{tr('Four building blocks for every payment. Pick one to explore its controls and records.', '四项能力，串起每笔付款。选择一项，查看它的规则与记录。')}</p>
-        <div className="stack-grid">{capabilities.map(({ id, n, Icon, title, text, tags, to }) => <Link className="stack-card" id={id} to={to} key={n}><div className="stack-card-top"><span className="stack-number">{n}</span><span className="stack-icon"><Icon size={16} strokeWidth={1.6} /></span></div><h3>{title}</h3><p>{text}</p><span className="stack-tags">{tags.map(tag => <span key={tag}>{tag}</span>)}</span><strong>{tr('Explore workspace', '打开工作台')} →</strong></Link>)}</div>
+      <section className="launch-card reveal" id="workflow"><div><p className="mono-label">// {tr('NEED A PAYMENT WORKSPACE', '准备好你的付款工作台')}</p><h2>{tr('Open your workspace.', '进入你的工作台。')}</h2><p>{tr('Team access connects invoices, agent decisions and payment records. Everyone can inspect the public ledger and agent history.', '团队工作台连接发票、Agent 决策与付款记录。所有人都能查看公开账本和 Agent 历史。')}</p></div><Magnetic><Link to="/inbox" className="site-button">{tr('Open workspace', '进入工作台')} <span aria-hidden>→</span></Link></Magnetic></section>
+      <section className="stack-section" id="stack"><div className="reveal"><p className="mono-label">// {tr('BUILDING BLOCKS', '核心能力')}</p><h2>{tr('Explore the', '探索你的')} <span>{tr('workspace.', '付款工作台。')}</span></h2><p className="section-copy">{tr('Four building blocks for every payment. Pick one to explore its controls and records.', '四项能力，串起每笔付款。选择一项，查看它的规则与记录。')}</p></div>
+        <div className="stack-grid">{capabilities.map(({ id, n, Icon, title, text, tags, to }, i) => <Link className="stack-card reveal" id={id} to={to} key={n} style={{ ['--reveal-delay' as string]: `${i * 90}ms` }}><div className="stack-card-top"><span className="stack-number">{n}</span><span className="stack-icon"><Icon size={16} strokeWidth={1.6} /></span></div><h3>{title}</h3><p>{text}</p><span className="stack-tags">{tags.map(tag => <span key={tag}>{tag}</span>)}</span><strong>{tr('Explore workspace', '打开工作台')} →</strong></Link>)}</div>
       </section>
     </main><SiteFooter />
   </div>
