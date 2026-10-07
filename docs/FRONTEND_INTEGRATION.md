@@ -22,4 +22,10 @@ TypeScript, production build and mock build pass. Ruff and all 205 backend tests
 
 Browser checks use the actual HTTP application with injected synthetic model/chain adapters and an isolated test database: invalid/valid team token; both-agent invoice comparison; paid/blocked reason display; authenticated preview image; owner controls disabled without a wallet; sign-out; public submission; reputation evidence including a known fake invoice paid within policy; Chinese/English and light/dark views. No paid model calls or public-chain writes occur in these checks. Mobile and projector layouts are checked in the in-app browser; physical mobile-data/WeChat acceptance remains a separate launch gate.
 
-Deployment evidence and rollback release are recorded in DEPLOYMENT.md after HTTPS verification. Current public processing remains disabled unless separately authorized and configured.
+Deployed `e0dcab4` to the existing HTTPS preview after verified backup. Before/after API checks preserved all 21 ledger events, both agent histories, registry and config. Production browser checks passed without console errors. Rollback and detailed evidence are recorded in DEPLOYMENT.md. Current public processing remains disabled unless separately authorized and configured.
+
+## Dependency audit follow-up
+
+The server's npm audit on the locked tree reports **34 findings: 27 moderate, 7 high, 0 critical**. Existing dependency versions were retained; neither newly added `lucide-react` nor `@fontsource-variable/geist-mono` is flagged in this report. High-severity entries include `braces`, `chokidar`, `fast-glob`, `micromatch`, `tailwindcss`, `vite` and `ws`, including transitive propagation. The report suggests major Tailwind/Vite/Wagmi upgrades for several findings. These require compatibility and wallet regression checks; no automatic forced upgrade was applied during the UI integration.
+
+The production image serves compiled frontend assets through FastAPI and does not run the Vite development server. This does not establish that all reported dependency issues are unreachable. Review reachability and resolve the existing dependency findings before treating the product as hardened for public payments. Local advisory JSON and browser/deployment evidence are kept under ignored `output/frontend-integration/`; never publish private runtime data with them.

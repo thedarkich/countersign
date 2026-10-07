@@ -1,6 +1,6 @@
 # Backend deployment and recovery
 
-The frontend team owns `frontend/`. Backend changes preserve the existing HTTP response shapes. New internal recovery fields are filtered from public responses. The build packages the team's frontend unchanged.
+The frontend team owns `frontend/`. Backend changes preserve the existing HTTP response shapes. New internal recovery fields are filtered from public responses. The build packages the integrated teammate frontend; the user-requested adaptation is documented in FRONTEND_INTEGRATION.md.
 
 ## Release preparation
 
@@ -56,12 +56,13 @@ Offline evaluation runs from the writable local checkout with explicit budget au
 ## Verified deployment — 7 October 2026
 
 - HTTPS preview: https://139-180-194-19.sslip.io/#/ledger (testnet, read-only).
-- Image: `countersign-api:6fd9d14`; server release directory `/opt/countersign/releases/6fd9d14`. Previous `c22ede6`, `a962754`, `ffa05c4` and `c2c5de5` images/releases retained for rollback.
+- Image: `countersign-api:e0dcab4`; server release directory `/opt/countersign/releases/e0dcab4`. Previous `6fd9d14`, `c22ede6`, `a962754`, `ffa05c4` and `c2c5de5` images/releases retained for rollback.
 - Persistent data: `/opt/countersign/shared/data`, UID/GID 10001. Generated admin/privacy settings are in that release's private `deploy/runtime.env`; preserve/reuse the configuration on the next release without printing it. No agent/provider/owner/deployer key was installed for this preview.
 - Previous security rollout backup: `/opt/countersign/shared/data/backups/pre-security-ffa05c4.db`, integrity checked before replacement. The new image passed parser and persistent-budget smoke tests with networking disabled. External HTTPS verifies unchanged receipts and closed admission; one incomplete upload returned 408 after 15.2 seconds while health reads remained available.
 - Latest admission-hardening backup: `/opt/countersign/shared/data/backups/pre-admission-a962754.db`, integrity checked before replacement. The new image passed stored-input revalidation/path-confinement/private-permissions smoke with networking disabled, then public HTTPS preserved all 21 displayed receipts and closed admission.
 - Latest diagnostics backup: `/opt/countersign/shared/data/backups/pre-diagnostics-c22ede6.db`, integrity checked before replacement. The image passed a network-disabled diagnostic/fail-closed/call-accounting smoke; HTTPS verified all 21 retained ledger records, three vendors, two reputation identities, 401 for unauthorized team reads and 503 for closed public submissions. No paid credentials were installed; the existing frontend layers were reused.
 - Latest RPC-read rollout backup: `/opt/countersign/shared/data/backups/pre-rpc-6fd9d14.db`, integrity checked before replacement. The image passed a network-disabled batch-read smoke; HTTPS before/after comparison preserved exact ledger rows, both agent histories, config/registry and frontend HTML hash. Chain 968, all 21 receipts, fresh coverage, unauthorized 401 and closed bounty 503 verified. No paid model calls or public-chain writes ran in this rollout.
+- Frontend integration backup: `/opt/countersign/shared/data/backups/pre-frontend-e0dcab4.db`, integrity checked before replacement. Image `e0dcab4` passed production build and a network-disabled non-root bundle/import smoke. HTTPS before/after comparison preserved exact ledger rows (21), both agent histories, config and registry, while the frontend HTML changed. All lazy route/reputation assets and local font/license files return 200. Live browser checks passed for landing, ledger/reputation, closed bounty and Controls redirect to team access, with no browser errors. Previous image `6fd9d14` remains the immediate rollback. Processing flags and private settings are unchanged.
 - Live containers: `countersign-api-1` (healthy, internal port only) and `countersign-caddy-1` (80/443). Previous connectivity containers remain stopped for rollback. The loopback QA container is stopped.
 - TLS/HTML/config/registry/ledger/reputation checks passed. AI, transactions, bounty and batches are disabled. The non-green readiness response is expected for this closed preview.
 - Verified backup: `/opt/countersign/shared/data/backups/preview-c2c5de5.db`; a controlled API restart retained all 21 displayed ledger events, including the real AI testnet receipt. A restart with no in-flight jobs is not a live crash-during-broadcast rehearsal; that case has isolated Anvil coverage.
@@ -69,8 +70,8 @@ Offline evaluation runs from the writable local checkout with explicit budget au
 Use this environment prefix with operational commands on this release:
 
 ```bash
-cd /opt/countersign/releases/6fd9d14
-export IMAGE_TAG=6fd9d14
+cd /opt/countersign/releases/e0dcab4
+export IMAGE_TAG=e0dcab4
 export COUNTERSIGN_DATA_DIR=/opt/countersign/shared/data
 docker compose -f deploy/docker-compose.yml ps
 ```
