@@ -304,11 +304,29 @@ def create_app(settings=None, *, runtime=None):
     @team.get("/demo-invoices", response_model=list[DemoInvoice], response_model_exclude_none=True)
     async def demos(request: Request):
         current = request.app.state.runtime
-        return [
-            current.demo(entry["name"])[1]
-            for entry in current.manifest()
-            if entry.get("stage") is True
-        ]
+        staged = [entry for entry in current.manifest() if entry.get("stage") is True]
+        clean = [entry["name"] for entry in staged if entry.get("kind") == "clean"]
+        used = set()
+        if clean:
+            # A clean invoice pays once and a rerun is a duplicate, so the shelf offers the
+            # next unused one per language instead.
+            with Session(current.store.engine) as session:
+                used = set(
+                    session.exec(
+                        select(Attempt.demo_name).where(
+                            Attempt.demo_name.in_(clean),
+                            (Attempt.outcome == "paid") | Attempt.status.not_in(["done", "error"]),
+                        )
+                    ).all()
+                )
+        shown, languages = [], set()
+        for entry in staged:
+            if entry.get("kind") == "clean":
+                if entry["name"] in used or entry.get("language") in languages:
+                    continue
+                languages.add(entry.get("language"))
+            shown.append(current.demo(entry["name"])[1])
+        return shown
 
     @team.post("/batch", status_code=202, dependencies=[Depends(require_admin_token)])
     async def batch(request: Request, body: BatchInput):

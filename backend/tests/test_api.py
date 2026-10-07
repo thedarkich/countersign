@@ -415,6 +415,24 @@ def test_manifest_whitelist_and_holdout_exclusion(api_system):
     )
 
 
+def test_demo_shelf_offers_each_clean_invoice_until_paid(api_system):
+    client, runtime, _, _ = api_system
+    add_fixture(runtime, "clean/one.pdf")
+    add_fixture(runtime, "clean/two.pdf")
+    add_fixture(runtime, "poisoned/attack.pdf", kind="poisoned")
+
+    def shelf():
+        return [d["name"] for d in client.get("/api/team/demo-invoices", headers=ADMIN).json()]
+
+    assert shelf() == ["clean/one.pdf", "poisoned/attack.pdf"]
+    response = client.post("/api/team/attempts", headers=ADMIN, data={"demo": "clean/one.pdf"})
+    assert done(client, response.json()["attempt_id"], ADMIN)["outcome"] == "paid"
+    assert shelf() == ["clean/two.pdf", "poisoned/attack.pdf"]
+    response = client.post("/api/team/attempts", headers=ADMIN, data={"demo": "poisoned/attack.pdf"})
+    done(client, response.json()["attempt_id"], ADMIN)
+    assert shelf() == ["clean/two.pdf", "poisoned/attack.pdf"]
+
+
 def test_disabled_spend_bounty_and_batch_gates(api_system):
     client, runtime, chain, _ = api_system
     runtime.settings.bounty_enabled = False

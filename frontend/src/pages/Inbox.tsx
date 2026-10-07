@@ -215,21 +215,25 @@ type OnSent = (ids: string[], pair: { guarded: string; naive: string } | null, l
 /** The invoices we use on stage, one click each. */
 function DemoShelf({ target, onSent }: { target: Target; onSent: OnSent }) {
   const { tr, lang } = useLang()
+  const qc = useQueryClient()
   const q = useQuery({ queryKey: ['demo-invoices'], queryFn: api.demoInvoices, staleTime: 60_000, retry: 1 })
   const [busy, setBusy] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
   if (!q.data || q.data.length === 0) return null
+  // a clean invoice can be paid once; sending it to both agents would make the second a duplicate
+  const routeFor = (p: DemoInvoice): Target => (p.kind === 'clean' && target === 'both' ? 'guarded' : target)
 
   async function run(p: DemoInvoice) {
     setErr(null)
     setBusy(p.name)
     try {
-      const r = await sendTo(target, { demo: p.name })
+      const r = await sendTo(routeFor(p), { demo: p.name })
       onSent(r.ids, r.pair, lang === 'zh' ? p.title_zh : p.title_en)
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(null)
+      void qc.invalidateQueries({ queryKey: ['demo-invoices'] })
     }
   }
 
@@ -248,7 +252,7 @@ function DemoShelf({ target, onSent }: { target: Target; onSent: OnSent }) {
               <span className={`text-xs font-semibold ${p.kind === 'clean' ? 'text-jade' : 'text-cinnabar'}`}>{p.kind === 'clean' ? tr('clean', '正常') : tr('poisoned', '有毒')}</span>
               <span className="mt-0.5 font-semibold leading-snug">{lang === 'zh' ? p.title_zh : p.title_en}</span>
               {(p.note_en || p.note_zh) && <span className="mt-0.5 text-[0.82rem] leading-snug text-ink2">{lang === 'zh' ? p.note_zh : p.note_en}</span>}
-              <span className="mt-auto pt-2 text-sm text-ink2">{busy === p.name ? tr('Sending…', '发送中…') : `${tr('Run on', '发给')} ${targetName(target, tr)}`}</span>
+              <span className="mt-auto pt-2 text-sm text-ink2">{busy === p.name ? tr('Sending…', '发送中…') : `${tr('Run on', '发给')} ${targetName(routeFor(p), tr)}`}</span>
             </button>
           </li>
         ))}
