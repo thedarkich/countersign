@@ -1,0 +1,51 @@
+name: countersign
+services:
+  api:
+    image: countersign-api:${IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
+    env_file:
+      - path: ./runtime.env
+        required: true
+        format: raw
+    environment:
+      DATA_DIR: /app/data
+      STATIC_DIR: /app/static
+    volumes:
+      - ${COUNTERSIGN_DATA_DIR:-../data}:/app/data
+    expose:
+      - "8000"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 2g
+    stop_grace_period: 120s
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  caddy:
+    image: caddy:2-alpine
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:-139-180-194-19.sslip.io}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api: {condition: service_healthy}
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+volumes:
+  caddy_data: {external: true, name: countersign_caddy_data}
+  caddy_config: {external: true, name: countersign_caddy_config}

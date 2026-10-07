@@ -14,9 +14,9 @@ The rules bound spending authority. They do **not** prove an invoice is genuine:
 |---|---|---|
 | Frontend | Four redesigned screens, English/Chinese, themes, mobile layout; local HTTP API flows checked | Live-model/funded-network acceptance and public deployment |
 | Vault | Tested Solidity contract; verified BOT testnet deployment and real payment/block receipts | Mainnet funding and deployment |
-| Backend | Invoice pipeline, HTTP API, authentication/rate limits, private previews, persistence, model/transaction adapters and chain-state reads | Recovery/backfill, dataset/CLI, reputation/evaluation and deployed end-to-end flow |
-| Agent reputation | Bounded activity summaries in the mock interface | Persistent public reputation with source/version metadata and evidence per SPEC §3.11 |
-| Bounty and evaluation | Mock submission flow and documented design | Approved public launch, real attack collection and held-out evaluation |
+| Backend | Invoice pipeline/API, recovery/backfill, reputation, fixtures/CLI, offline evaluation tools and Docker deployment | Stage attack validation, paid evaluation, mainnet acceptance and final public launch |
+| Agent reputation | Public evidence-backed reputation API | Frontend integration in Ledger/Controls |
+| Bounty and evaluation | Submission API and offline evaluation tooling | Approved public launch, real attack collection and paid held-out evaluation |
 
 The frontend supports mock mode and the implemented local API. Browser API checks used simulated AI/chain adapters; separate read-only checks verified the deployed testnet vault. There is no publicly deployed application link yet. The existing VPS page is only a connectivity check. See the [full backend overview](docs/BACKEND_STATUS.md) and [current progress](docs/PROGRESS.md) for evidence and remaining work.
 
@@ -80,7 +80,7 @@ BOT Chain testnet, chain ID **968**. Vault: [`0x89Ea32CCB3c951ad48a56Dd3A156aeF6
 - [Blocked: duplicate invoice with a changed amount](https://scan.bohr.life/tx/0xf03ecdbbe816c16cf2693c34723379866626846c1a081657ce237ef9a49779f6)
 - [Queued vendor change](https://scan.bohr.life/tx/0xe49dcc4a4b18e3050ad4dba8d60c944817c41726d3d876072827ef48e1df43cf) and [execution after the delay](https://scan.bohr.life/tx/0x6936331119488fe8856b8493ff9a5ee051664f4dd070c63484131e3b66cc6d2e)
 
-These are direct scripted contract checks, not evidence that an AI was fooled. Full receipts/setup records: [testnet deployment](docs/deployments/testnet.json). Mainnet is not yet deployed.
+The receipts above are direct scripted contract checks, not evidence that an AI was fooled. A separate real Qwen Flash clean-invoice rehearsal paid 0.05 tUSDT: [AI-to-testnet receipt](https://scan.bohr.life/tx/0x69ab3f76a936ba4543fdd0f7f9dec6825580500b1f6ba4d66b1917ee8372f357). It used two model calls and took 47.5 seconds; attack reliability and average latency remain unmeasured. Full receipts/setup records: [testnet deployment](docs/deployments/testnet.json). Mainnet is not yet deployed.
 
 ## Backend and contract checks
 
@@ -96,14 +96,14 @@ uv run --frozen pytest -q
 uv run --frozen pytest -q integration/
 ```
 
-Recorded results for the current implementation: **92 contract tests, 81 backend tests and 8 isolated Anvil integration tests passed**. The default and Anvil suites use mocks/disposable local accounts; they do not spend model credit or broadcast public-chain transactions. Test details and limits: [backend README](backend/README.md) and [contract review](docs/security/CONTRACT_REVIEW.md).
+Recorded results for the current implementation: **92 contract tests, 108 backend tests and 19 isolated Anvil integration tests passed**. The default and Anvil suites use mocks/disposable local accounts; they do not spend model credit or broadcast public-chain transactions. Test details and limits: [backend README](backend/README.md) and [contract review](docs/security/CONTRACT_REVIEW.md).
 
 The HTTP server is implemented: run `uv run --frozen uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1` from `backend/`. It serves the production frontend build when present. Paid model calls, real transactions, public bounty admission and paid batches are disabled by default; the current model allowance is small tests only. See the [backend run instructions](backend/README.md).
 
 ## Working together
 
 - Read [AGENTS.md](AGENTS.md), [PRODUCT.md](docs/PRODUCT.md), [SPEC.md](docs/SPEC.md), and the README for the component you change.
-- Keep interface changes coordinated across `frontend/src/api/types.ts`, the live/mock clients and the backend. The vault ABI is the chain interface.
+- The frontend team owns UI/UX; Codex focuses on the backend. Read the [backend handoff](docs/BACKEND_HANDOFF.md) for the additive reputation route. Keep interface changes coordinated across `frontend/src/api/types.ts`, the live/mock clients and the backend. The vault ABI is the chain interface.
 - Work in focused branches and pull before starting. Update `docs/PROGRESS.md` with verified results and limitations.
 - Use `.env.example` to learn configuration names. Never commit `.env`, wallet keys, provider credentials, uploads or databases. The mainnet owner key stays in the human's wallet.
 

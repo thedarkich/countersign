@@ -1,0 +1,481 @@
+{
+  "$defs": {
+    "AgentHistory": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "chain_id": {
+          "title": "Chain Id",
+          "type": "integer"
+        },
+        "contract_address": {
+          "title": "Contract Address",
+          "type": "string"
+        },
+        "agent_address": {
+          "title": "Agent Address",
+          "type": "string"
+        },
+        "label": {
+          "enum": [
+            "guarded",
+            "naive"
+          ],
+          "title": "Label",
+          "type": "string"
+        },
+        "role_en": {
+          "title": "Role En",
+          "type": "string"
+        },
+        "role_zh": {
+          "title": "Role Zh",
+          "type": "string"
+        },
+        "active": {
+          "title": "Active",
+          "type": "boolean"
+        },
+        "status": {
+          "enum": [
+            "no_history",
+            "no_flag_observed",
+            "suspicious_observed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "status_en": {
+          "title": "Status En",
+          "type": "string"
+        },
+        "status_zh": {
+          "title": "Status Zh",
+          "type": "string"
+        },
+        "first_observed_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "First Observed At"
+        },
+        "last_observed_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last Observed At"
+        },
+        "counts": {
+          "$ref": "#/$defs/Counts"
+        },
+        "breakdown": {
+          "items": {
+            "$ref": "#/$defs/Breakdown"
+          },
+          "title": "Breakdown",
+          "type": "array"
+        },
+        "recent_observations": {
+          "items": {
+            "$ref": "#/$defs/Observation"
+          },
+          "title": "Recent Observations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "chain_id",
+        "contract_address",
+        "agent_address",
+        "label",
+        "role_en",
+        "role_zh",
+        "active",
+        "status",
+        "status_en",
+        "status_zh",
+        "first_observed_at",
+        "last_observed_at",
+        "counts",
+        "breakdown",
+        "recent_observations"
+      ],
+      "title": "AgentHistory",
+      "type": "object"
+    },
+    "Breakdown": {
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "scenario": {
+          "title": "Scenario",
+          "type": "string"
+        },
+        "model_versions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Model Versions",
+          "type": "object"
+        },
+        "guard_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Guard Version"
+        },
+        "counts": {
+          "$ref": "#/$defs/Counts"
+        }
+      },
+      "required": [
+        "source",
+        "scenario",
+        "model_versions",
+        "guard_version",
+        "counts"
+      ],
+      "title": "Breakdown",
+      "type": "object"
+    },
+    "Counts": {
+      "additionalProperties": false,
+      "properties": {
+        "observations": {
+          "default": 0,
+          "title": "Observations",
+          "type": "integer"
+        },
+        "attempts": {
+          "default": 0,
+          "title": "Attempts",
+          "type": "integer"
+        },
+        "refusals": {
+          "default": 0,
+          "title": "Refusals",
+          "type": "integer"
+        },
+        "proposals": {
+          "default": 0,
+          "title": "Proposals",
+          "type": "integer"
+        },
+        "known_attack_attempts": {
+          "default": 0,
+          "title": "Known Attack Attempts",
+          "type": "integer"
+        },
+        "known_attack_refusals": {
+          "default": 0,
+          "title": "Known Attack Refusals",
+          "type": "integer"
+        },
+        "suspicious_proposals": {
+          "default": 0,
+          "title": "Suspicious Proposals",
+          "type": "integer"
+        },
+        "confirmed_payments": {
+          "default": 0,
+          "title": "Confirmed Payments",
+          "type": "integer"
+        },
+        "policy_blocks": {
+          "default": 0,
+          "title": "Policy Blocks",
+          "type": "integer"
+        },
+        "errors": {
+          "default": 0,
+          "title": "Errors",
+          "type": "integer"
+        },
+        "receipt_only": {
+          "default": 0,
+          "title": "Receipt Only",
+          "type": "integer"
+        },
+        "unverified": {
+          "default": 0,
+          "title": "Unverified",
+          "type": "integer"
+        }
+      },
+      "title": "Counts",
+      "type": "object"
+    },
+    "Coverage": {
+      "additionalProperties": false,
+      "properties": {
+        "network": {
+          "title": "Network",
+          "type": "string"
+        },
+        "chain_id": {
+          "title": "Chain Id",
+          "type": "integer"
+        },
+        "contract_address": {
+          "title": "Contract Address",
+          "type": "string"
+        },
+        "observed_from_block": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Observed From Block"
+        },
+        "observed_to_block": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Observed To Block"
+        },
+        "scan_from_block": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Scan From Block"
+        },
+        "scanned_through_block": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Scanned Through Block"
+        },
+        "last_sync": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last Sync"
+        },
+        "stale": {
+          "title": "Stale",
+          "type": "boolean"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "scope": {
+          "const": "configured_vault_observed_history",
+          "default": "configured_vault_observed_history",
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "network",
+        "chain_id",
+        "contract_address",
+        "observed_from_block",
+        "observed_to_block",
+        "scan_from_block",
+        "scanned_through_block",
+        "last_sync",
+        "stale",
+        "gaps"
+      ],
+      "title": "Coverage",
+      "type": "object"
+    },
+    "Observation": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "time": {
+          "title": "Time",
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "bounty",
+            "seed",
+            "team",
+            "batch",
+            "unknown"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "scenario": {
+          "enum": [
+            "known_attack",
+            "clean_fixture",
+            "unlabeled",
+            "unknown"
+          ],
+          "title": "Scenario",
+          "type": "string"
+        },
+        "model_versions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Model Versions",
+          "type": "object"
+        },
+        "guard_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Guard Version"
+        },
+        "outcome": {
+          "enum": [
+            "paid",
+            "blocked",
+            "refused",
+            "no_invoice",
+            "error",
+            "pending",
+            "unverified"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "reason_codes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reason Codes",
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "enum": [
+              "application_record",
+              "verified_transaction"
+            ],
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "transaction_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Transaction Url"
+        },
+        "suspicious": {
+          "title": "Suspicious",
+          "type": "boolean"
+        },
+        "summary_en": {
+          "title": "Summary En",
+          "type": "string"
+        },
+        "summary_zh": {
+          "title": "Summary Zh",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "time",
+        "source",
+        "scenario",
+        "model_versions",
+        "guard_version",
+        "outcome",
+        "reason_codes",
+        "evidence",
+        "transaction_url",
+        "suspicious",
+        "summary_en",
+        "summary_zh"
+      ],
+      "title": "Observation",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "agents": {
+      "items": {
+        "$ref": "#/$defs/AgentHistory"
+      },
+      "title": "Agents",
+      "type": "array"
+    },
+    "updated_at": {
+      "title": "Updated At",
+      "type": "string"
+    },
+    "coverage": {
+      "$ref": "#/$defs/Coverage"
+    }
+  },
+  "required": [
+    "agents",
+    "updated_at",
+    "coverage"
+  ],
+  "title": "ReputationView",
+  "type": "object"
+}

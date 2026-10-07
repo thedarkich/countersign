@@ -1,0 +1,50 @@
+# Backend handoff to the frontend team
+
+Frontend/UI/UX belongs to the team. This release changes no files under `frontend/`. Existing HTTP response shapes remain compatible with `frontend/src/api/types.ts`. Backend-only proposal fields such as `amount_base` are private and filtered from those responses.
+
+## Existing contract
+
+- Public reads: `/api/health`, `/api/config`, `/api/registry`, `/api/stats`, `/api/leaderboard`, `/api/ledger`, `/api/eval`, `/api/attempts/{id}`.
+- Bounty submission: multipart `POST /api/bounty/attempts`, with `X-Device-Id` and the existing fields. Closed admission returns a bilingual 503.
+- Team routes: bearer-authenticated `/api/team/attempts`, `/api/team/demo-invoices`, `/api/team/batch`, `/api/team/batch/{id}`, `/api/team/owner-tx`.
+- Private image: `/api/attempts/{id}/preview.png`, authenticated with admin bearer or the originating device. Use the existing authenticated blob-loading flow.
+- `/api/eval` returns `{}` until real results exist. Do not fill that state with simulated scores in the live client.
+- The API is served from the same HTTPS origin as the production bundle. Local Vite development already proxies `/api` to a local backend. A local backend with simulated adapters/mocks is sufficient for UI work; do not distribute signing keys or provider credentials to frontend builds.
+
+## New additive endpoint
+
+`GET /api/reputation?network=testnet&limit=20` needs no authentication. `network` is `testnet` or `mainnet` (default: team network); `limit` is 1–100 recent observations **per agent**. Counters cover all stored scoped observations, not just that recent list. Unavailable initial chain state returns a bilingual 503. A previously verified in-memory snapshot may be served with `coverage.stale=true` and `CHAIN_STATE_STALE` after a refresh failure.
+
+The authoritative JSON Schema is [REPUTATION.schema.json](REPUTATION.schema.json), generated from the backend response model. Root shape:
+
+```text
+{ agents: AgentHistory[], updated_at: ISO timestamp, coverage: Coverage }
+```
+
+`AgentHistory` includes stable `id` (chain:vault:address), identity fields, guarded/naive label, bilingual role/status labels, active state, first/last observed times, aggregate `counts`, `breakdown` by source/scenario/model/guard, and `recent_observations`. Unknown external receipts have source/scenario `unknown` and empty model metadata: never present them as proven AI activity.
+
+| Field | Meaning |
+|---|---|
+| status | `no_history`, `no_flag_observed`, or `suspicious_observed` |
+| counts.suspicious_proposals | Known attack led to a payment proposal, or a verified `PayoutMismatch`; both together count once |
+| counts.known_attack_refusals | Successful defensive refusals; do not subtract reputation for these |
+| counts.confirmed_payments / policy_blocks | Matched verified receipt evidence, not merely an application outcome string |
+| counts.receipt_only / unverified | External receipt with unknown context / claimed chain outcome without indexed receipt proof |
+| observation.evidence | `application_record`, `verified_transaction`, or both |
+| observation.transaction_url | Verified transaction explorer URL, otherwise null |
+| observation.reason_codes | `KNOWN_ATTACK_PROPOSAL` and/or verified contract reason; render as text, never HTML |
+| coverage | Configured vault scope, observed block bounds, scan bounds, last sync, stale flag and gap codes |
+
+Coverage always includes `OBSERVED_HISTORY_ONLY` and `EXPLORER_DISCOVERY_DEPENDENCY`. Other gaps include `INDEXER_DISABLED`, `BACKFILL_NOT_VERIFIED`, `INDEXER_STALE`, `BACKFILL_INCOMPLETE`, `BACKFILL_CATCHING_UP`, `REORG_REBUILD`, and `CHAIN_STATE_STALE`. Fresh data is still observed history, not a global agent score. Preserve history after revocation/key rotation; a new address has a separate identity.
+
+Public observations contain fixed bilingual summaries, public addresses, model/version metadata and evidence links. They omit private invoice content, hidden instructions, device/IP identifiers and nicknames. Budget, duplicate, pause and execution errors alone do not receive a suspicious flag. A known fake invoice paid to an approved vendor stays suspicious even when outside-registry outflow is zero.
+
+## Frontend work to finish
+
+1. Add reputation types/live client/mock together, using the schema. Display in the existing Ledger and Controls workflows, retaining the naive demo label, evidence source and coverage warnings.
+2. Render `money_lost` as “Funds sent outside registered payouts” (or equivalent), not total fraud losses. Show paid fake invoices to registered vendors separately.
+3. Use `/api/config` for network/asset/vault identity. The current preview is testnet; final stage/mainnet activation is a separate gate. Keep declined/error/pending states distinct.
+4. Preserve admin/device authorization for previews and team operations, and display “not open”/“not evaluated” states honestly. No approve-anyway button is part of this build.
+5. Recheck responsive layouts, Chinese/English, mobile data and WeChat against the deployed build. No external CDN/font dependency should be introduced.
+
+Coordinate any changes to existing response shapes with the backend before merging. This new endpoint does not change payment authority or owner signing.
