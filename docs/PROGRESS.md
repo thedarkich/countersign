@@ -8,12 +8,18 @@ Codex keeps this file current. Newest entries at the top of each section.
 |---|---|---|
 | 0 Environment | public configuration, AI routes, all four signing keys, test funds and HTTPS checked; mainnet funding/organizer answers pending | Human ran the private helper; all identities matched. Runtime testnet deployment/setup/proof confirmed the four signers. No keys displayed; .env remains ignored with mode 0600. Latest AI route checks and tests-only budget remain unchanged. Private GitHub repository uploaded; both teammate invitations sent. |
 | 1 Contract | testnet deployed, source verified and live proof passed; mainnet pending | 92 local tests pass, including the expanded operations rehearsal. Verified testnet vault, 8 delayed setup changes, 20 tUSDT funding and real Paid/PayoutMismatch/OverBudget/DuplicateInvoice receipts. Vault holds 19.9 tUSDT after the 0.1 proof payment. Mainnet owner/deployer/agents each have 0 BOT; no mainnet deployment or phase-completion tag. |
-| 2 Pipeline | clean real-model/testnet flow passed; attack acceptance pending | 108 unit/API + 19 Anvil tests pass. Recovery/backfill, CLI/64 fixtures, canonical snapshots and public reputation implemented. Two Qwen Flash calls paid 0.05 tUSDT; 47.5 s measured. Stage attacks and funded batch remain unvalidated. |
+| 2 Pipeline | clean real-model/testnet flow passed; attack acceptance pending | 126 unit/API + 19 Anvil tests pass. Recovery/backfill, CLI/64 fixtures, canonical snapshots and public reputation implemented. Two Qwen Flash calls paid 0.05 tUSDT; 47.5 s measured. Stage attacks and funded batch remain unvalidated. |
 | 3 Bounty live | API implemented; public admission closed | Docker/Compose/Caddy package and isolated VPS smoke passed. HTTPS read-only testnet preview, private backup and restart retention passed. Organizer permission, operating AI budget and final phone/WeChat acceptance remain. |
 | 4 Product | backend ready for frontend integration; funded acceptance pending | Evidence-derived reputation route/schema delivered without frontend edits. Team owns UI/UX. Mainnet owner rehearsal, stage reliability and final app checks remain. |
 | 5 Learning loop | offline tooling implemented and tested; paid run not started | Grouped split, clean holdout, stateful-rule exclusions, counts/Wilson intervals, run-once marker and conditional v2 eligibility implemented. No eligible attacks yet; no results invented or guard switch. |
 | 6 Public Good lane | not started | |
 | 7 Submit | not started | |
+
+## Backend security hardening — 2026-10-07
+
+The human reaffirmed cybersecurity as the product focus and assigned frontend work to teammates. Fixed three concrete backend gaps: in-process native document parsing, unbounded upload wait/concurrency, and AI call limits resetting on restart. API/CLI/evaluation files now use disposable Linux parsers (384 MiB address space, 6 CPU seconds, 12 wall seconds, 24 MiB output); parser timeouts/crashes/cancellation are contained and processes reaped. Hidden-text evidence survives serialization. Modifying HTTP requests have a 15-second total body deadline and eight admission slots held through processing. SQLite reservations count AI calls atomically across restarts and fail closed when unavailable; failed calls still count. No frontend files or API success shapes changed.
+
+Verification: **126 unit/API tests + 19 isolated Anvil tests pass**, Ruff passes. Eighteen new security regression cases cover actual worker failures/resource limits, hidden attack evidence, slow/chunked bodies, concurrency, cancellation and durable budget exhaustion. No paid AI calls or public-chain writes were made. [Security findings and residual boundaries](security/BACKEND_REVIEW.md): process limits are not a filesystem/network sandbox, and a call cap is not a dollar budget. Public preview gates remain closed. Deployment verification follows below once completed.
 
 ## Backend launch preparation — 2026-10-07
 

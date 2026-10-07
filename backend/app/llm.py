@@ -11,6 +11,8 @@ from typing import TypeVar
 from openai import APIError, AsyncOpenAI
 from pydantic import BaseModel, ValidationError
 
+from app.model_budget import BudgetExhausted
+
 Model = TypeVar("Model", bound=BaseModel)
 
 
@@ -31,6 +33,7 @@ class ModelGateway:
         hourly_cap: int = 20,
         max_tokens: int = 512,
         clock=time.monotonic,
+        budget=None,
     ):
         if hourly_cap < 1 or not 1 <= max_tokens <= 2048:
             raise ValueError("invalid model limits")
@@ -41,19 +44,41 @@ class ModelGateway:
         self.clock = clock
         self.calls: deque[float] = deque()
         self.lock = asyncio.Lock()
+        self.budget = budget
 
     @classmethod
     def tokenrouter(
-        cls, api_key: str, *, enabled: bool = False, hourly_cap: int = 20, max_tokens: int = 1024
+        cls,
+        api_key: str,
+        *,
+        enabled: bool = False,
+        hourly_cap: int = 20,
+        max_tokens: int = 1024,
+        budget=None,
     ):
         client = AsyncOpenAI(
             api_key=api_key, base_url="https://api.tokenrouter.com/v1", timeout=30.0, max_retries=0
         )
-        return cls(client, enabled=enabled, hourly_cap=hourly_cap, max_tokens=max_tokens)
+        return cls(
+            client, enabled=enabled, hourly_cap=hourly_cap, max_tokens=max_tokens, budget=budget
+        )
+
+    def exhausted(self):
+        if self.budget is not None:
+            return self.budget.exhausted()
+        return sum(call > self.clock() - 3600 for call in self.calls) >= self.hourly_cap
 
     async def _reserve(self):
         if not self.enabled:
             raise ModelUnavailable("Paid AI calls are disabled.")
+        if self.budget is not None:
+            try:
+                await asyncio.to_thread(self.budget.reserve)
+            except BudgetExhausted:
+                raise CallLimitReached("Hourly AI call limit reached.") from None
+            except Exception:
+                raise ModelUnavailable("AI call budget is unavailable.") from None
+            return
         async with self.lock:
             now = self.clock()
             while self.calls and self.calls[0] <= now - 3600:

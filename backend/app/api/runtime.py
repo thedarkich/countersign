@@ -16,7 +16,8 @@ from app.chain.state import read_state, report_receipt
 from app.db import AttemptStore
 from app.models import Attempt, StateCache, now_iso
 from app.pipeline.extract import InvoiceModels
-from app.pipeline.ingest import ingest_bytes, ingest_text
+from app.pipeline.ingest import ingest_text
+from app.pipeline.isolated_ingest import ingest_isolated
 from app.pipeline.runner import PipelineRunner
 
 
@@ -27,11 +28,11 @@ class Runtime:
         self.settings = settings
         self.store = AttemptStore(settings.data_dir / "countersign.db")
         self.chain = chain or VaultClient.from_settings(settings, engine=self.store.engine)
-        self.models = models or InvoiceModels.from_settings(settings)
+        self.models = models or InvoiceModels.from_settings(settings, engine=self.store.engine)
         self.runner = PipelineRunner(self.store, self.models, self.chain)
         self.limiter = RateLimiter(self.store.engine, settings)
         self.queue = asyncio.Queue(maxsize=settings.queue_capacity)
-        self.ingest_slots = asyncio.Semaphore(3)
+        self.ingest_slots = asyncio.Semaphore(2)
         self.admission = asyncio.Lock()
         self.states = {}
         self.refreshed = {}
@@ -132,10 +133,7 @@ class Runtime:
                 503, "AI processing is disabled for this checkpoint.", "当前版本尚未启用 AI 处理。"
             )
         gateway = getattr(self.models, "gateway", None)
-        if (
-            gateway
-            and sum(call > gateway.clock() - 3600 for call in gateway.calls) >= gateway.hourly_cap
-        ):
+        if gateway and gateway.exhausted():
             raise problem(503, "Hourly AI call limit reached.", "已达到每小时 AI 调用上限。")
         if self.queue.full():
             raise problem(503, "Processing queue is full. Try later.", "处理队列已满，请稍后再试。")
@@ -143,7 +141,7 @@ class Runtime:
     async def ingest(self, *, data=None, text=None):
         async with self.ingest_slots:
             return (
-                await asyncio.to_thread(ingest_bytes, data)
+                await ingest_isolated(data)
                 if data is not None
                 else ingest_text(text)
             )

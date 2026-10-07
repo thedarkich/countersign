@@ -70,3 +70,9 @@ export IMAGE_TAG=c2c5de5
 export COUNTERSIGN_DATA_DIR=/opt/countersign/shared/data
 docker compose -f deploy/docker-compose.yml ps
 ```
+
+## Upload and model resource controls
+
+The API admits at most eight simultaneous modifying requests and allows 15 seconds for each complete upload body; the deadline does not reset per chunk. At most two document parsers run concurrently. Each Linux worker has 384 MiB address-space, 6 CPU-second, 12 wall-second and 24 MiB result limits. Native parser processes are terminated/reaped on cancellation or failure. These processes run under the same OS user; do not describe them as a full filesystem/network sandbox.
+
+AI call reservations use an additive SQLite table shared by API/operator/evaluation runtimes. Reservations commit before provider access and survive restart, even for failed or uncertain requests. Keep this database in persistent storage. Restoring an earlier backup can lose recent reservations; keep AI disabled after restoration until the previous rolling-hour window has expired or usage has been independently reconciled. Calls made before this patch are not reconstructed. A call limit does not enforce a dollar budget. All existing paid-work and public-launch gates still apply.

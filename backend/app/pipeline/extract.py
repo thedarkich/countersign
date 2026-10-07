@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from app.llm import ModelGateway
+from app.model_budget import ModelCallBudget
 from app.pipeline.ingest import Document
 from app.schemas import Extraction, GuardVerdict, NaiveDecision
 
@@ -28,12 +29,13 @@ class InvoiceModels:
         self.naive_prompt = (PROMPTS / "naive_agent.md").read_text()
 
     @classmethod
-    def from_settings(cls, settings):
+    def from_settings(cls, settings, *, engine):
         gateway = ModelGateway.tokenrouter(
             settings.tokenrouter_api_key.get_secret_value() or "disabled",
             enabled=settings.llm_enabled,
             hourly_cap=settings.llm_hourly_call_cap,
             max_tokens=settings.llm_max_output_tokens,
+            budget=ModelCallBudget(engine, settings.llm_hourly_call_cap),
         )
         return cls(
             gateway,

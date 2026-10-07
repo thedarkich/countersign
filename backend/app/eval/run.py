@@ -19,7 +19,8 @@ from app.models import Attempt, now_iso
 from app.pipeline.extract import PROMPTS
 from app.pipeline.guard import evaluate_guard
 from app.pipeline.hidden_text import inspect_hidden_text
-from app.pipeline.ingest import ingest_bytes, ingest_text
+from app.pipeline.ingest import ingest_text
+from app.pipeline.isolated_ingest import ingest_isolated
 from app.pipeline.match import match_invoice
 from app.schemas import Extraction
 
@@ -145,13 +146,13 @@ def build_prompt(v1, attacks, clean):
     )
 
 
-def attack_document(item):
+async def attack_document(item):
     if item.input_kind == "text":
         return ingest_text(item.input_text or "")
     path = Path(item.file_path)
     if path.stat().st_size > 5 * 1024 * 1024:
         raise ValueError("Stored input exceeds limit")
-    return ingest_bytes(path.read_bytes())
+    return await ingest_isolated(path.read_bytes())
 
 
 async def compare(models, registry, train, heldout, paths, output):
@@ -173,7 +174,7 @@ async def compare(models, registry, train, heldout, paths, output):
     versions, clean_examples = {}, []
     v1 = models.guard_prompt
     for path in paths["clean"][:6]:
-        extraction = await models.extract(ingest_bytes(path.read_bytes()), versions)
+        extraction = await models.extract(await ingest_isolated(path.read_bytes()), versions)
         clean_examples.append(
             {
                 "vendor_name": extraction.vendor_name,
@@ -189,13 +190,13 @@ async def compare(models, registry, train, heldout, paths, output):
         (
             row["id"],
             "attack",
-            attack_document(row["attempt"]),
+            await attack_document(row["attempt"]),
             Extraction.model_validate(row["attempt"].extraction),
         )
         for row in heldout
     ]
     for path in paths["clean_holdout"]:
-        document = ingest_bytes(path.read_bytes())
+        document = await ingest_isolated(path.read_bytes())
         extraction = await models.extract(document, versions)
         samples.append((path.name, "clean", document, extraction))
     details = []

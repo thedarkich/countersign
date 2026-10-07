@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import time
@@ -111,40 +112,17 @@ class RateLimiter:
 
 
 class RequestBoundary:
-    """Bound bodies before multipart parsing, including chunked requests."""
+    """Bound upload time, bytes and concurrent requests before multipart parsing."""
 
-    def __init__(self, app):
+    def __init__(self, app, *, body_timeout=15, max_inflight=8):
         self.app = app
+        self.body_timeout = body_timeout
+        self.max_inflight = max_inflight
+        self.inflight = 0
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
-        if scope["method"] in {"POST", "PUT", "PATCH"}:
-            content = bytearray()
-            while True:
-                part = await receive()
-                if part["type"] == "http.disconnect":
-                    return
-                content.extend(part.get("body", b""))
-                if len(content) > MAX_BYTES + 65536:
-                    response = JSONResponse(
-                        {"message_en": "Upload is too large.", "message_zh": "上传文件过大。"},
-                        status_code=413,
-                    )
-                    return await response(scope, receive, send)
-                if not part.get("more_body", False):
-                    break
-            consumed = False
-            original = receive
-
-            async def replay():
-                nonlocal consumed
-                if not consumed:
-                    consumed = True
-                    return {"type": "http.request", "body": bytes(content), "more_body": False}
-                return await original()
-
-            receive = replay
 
         async def secured_send(message):
             if message["type"] == "http.response.start":
@@ -157,4 +135,47 @@ class RequestBoundary:
                     )
             await send(message)
 
-        await self.app(scope, receive, secured_send)
+        async def reject(status, en, zh):
+            response = JSONResponse({"message_en": en, "message_zh": zh}, status_code=status)
+            await response(scope, receive, secured_send)
+
+        if scope["method"] not in {"POST", "PUT", "PATCH", "DELETE"}:
+            return await self.app(scope, receive, secured_send)
+        # No await between checking and reserving. Hold through processing, so
+        # accepted buffers waiting for RPC/parser work also remain bounded.
+        if self.inflight >= self.max_inflight:
+            return await reject(
+                503, "Upload service is busy. Try later.", "上传服务繁忙，请稍后再试。"
+            )
+        self.inflight += 1
+        try:
+            content = bytearray()
+            try:
+                # One deadline for the complete body; drip-fed chunks do not reset it.
+                async with asyncio.timeout(self.body_timeout):
+                    while True:
+                        part = await receive()
+                        if part["type"] == "http.disconnect":
+                            return
+                        chunk = part.get("body", b"")
+                        if len(content) + len(chunk) > MAX_BYTES + 65536:
+                            return await reject(413, "Upload is too large.", "上传文件过大。")
+                        content.extend(chunk)
+                        if not part.get("more_body", False):
+                            break
+            except TimeoutError:
+                return await reject(408, "Upload timed out. Try again.", "上传超时，请重试。")
+            consumed = False
+            original = receive
+
+            async def replay():
+                nonlocal consumed
+                if not consumed:
+                    consumed = True
+                    return {"type": "http.request", "body": bytes(content), "more_body": False}
+                return await original()
+
+            receive = replay
+            await self.app(scope, receive, secured_send)
+        finally:
+            self.inflight -= 1

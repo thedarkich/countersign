@@ -77,6 +77,11 @@ class RateBucket(SQLModel, table=True):
     expires_at: int = Field(index=True)
 
 
+class ModelCallReservation(SQLModel, table=True):
+    id: str = Field(primary_key=True)
+    reserved_at: float = Field(index=True)
+
+
 class SubmissionMeta(SQLModel, table=True):
     attempt_id: str = Field(primary_key=True)
     ip_hash: str | None = None

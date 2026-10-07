@@ -9,7 +9,6 @@ from app.api.runtime import Runtime
 from app.chain.client import VaultClient
 from app.config import Settings
 from app.fixtures import generate
-from app.pipeline.ingest import ingest_bytes, ingest_text
 from app.pipeline.runner import new_attempt
 
 
@@ -53,7 +52,11 @@ async def execute(settings, args):
         for path in paths:
             if path and path.stat().st_size > 5 * 1024 * 1024:
                 raise ValueError("Input exceeds file limit")
-            document = ingest_bytes(path.read_bytes()) if path else ingest_text(args.text)
+            document = (
+                await runtime.ingest(data=path.read_bytes())
+                if path
+                else await runtime.ingest(text=args.text)
+            )
             snapshot = await runtime.chain.snapshot(args.network)
             fixture = next(
                 (
