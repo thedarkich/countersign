@@ -1,4 +1,4 @@
-> 2026-10-06 redesign: the approved SpendMate references now inform the sidebar, dark/light surfaces, metric cards, agent wallets and activity layout. Four routes, owner actions and API shapes remain. See [design/provenance/checks](../docs/FRONTEND_REDESIGN.md). Ledger agent summaries are a bounded event view; full public reputation and live API wiring remain pending.
+> 2026-10-06 redesign: the approved SpendMate references now inform the sidebar, dark/light surfaces, metric cards, agent wallets and activity layout. Four routes, owner actions and API shapes remain. See [design/provenance/checks](../docs/FRONTEND_REDESIGN.md). Ledger agent summaries are a bounded event view; full public reputation remains pending. On 2026-10-07 the local HTTP API was implemented and all four routes were exercised with simulated AI/chain adapters; private invoice previews now send the required authentication headers. Live-model/funded-network acceptance and deployment remain pending.
 
 # Countersign frontend
 

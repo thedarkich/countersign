@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react'
+import { getAdminToken } from '../api/client'
 import type { Attempt } from '../api/types'
+import { getDeviceId } from '../lib/device'
 import { useLang } from '../i18n'
 
 const W = 595
@@ -12,6 +15,37 @@ const CJK = '"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif'
  */
 export function InvoicePreview({ attempt, showHidden }: { attempt: Attempt; showHidden: boolean }) {
   const { tr } = useLang()
+  const [preview, setPreview] = useState<{ url: string; blob: string } | null>(null)
+  const [previewFailed, setPreviewFailed] = useState(false)
+  useEffect(() => {
+    setPreview(null)
+    setPreviewFailed(false)
+    if (!attempt.preview_url) return
+    const url = attempt.preview_url
+    // Only fetch the private same-origin preview endpoint; never forward credentials elsewhere.
+    if (!/^\/api\/attempts\/[0-9a-f-]+\/preview\.png$/i.test(url)) {
+      setPreviewFailed(true)
+      return
+    }
+    const controller = new AbortController()
+    let blobUrl: string | undefined
+    const headers = new Headers({ 'X-Device-Id': getDeviceId() })
+    const token = getAdminToken()
+    if (token) headers.set('Authorization', `Bearer ${token}`)
+    fetch(url, { headers, signal: controller.signal, cache: 'no-store', redirect: 'error' })
+      .then(async (response) => {
+        if (!response.ok || !response.headers.get('Content-Type')?.startsWith('image/png')) throw new Error('Preview unavailable')
+        const image = await response.blob()
+        if (controller.signal.aborted) return
+        blobUrl = URL.createObjectURL(image)
+        setPreview({ url, blob: blobUrl })
+      })
+      .catch(() => { if (!controller.signal.aborted) setPreviewFailed(true) })
+    return () => {
+      controller.abort()
+      if (blobUrl) URL.revokeObjectURL(blobUrl)
+    }
+  }, [attempt.preview_url])
   const hidden = attempt.hidden_text
   const [pw, ph] = hidden?.page_size ?? [W, H]
 
@@ -36,8 +70,10 @@ export function InvoicePreview({ attempt, showHidden }: { attempt: Attempt; show
   if (attempt.preview_url) {
     return (
       <div className="relative ruled overflow-hidden bg-white">
-        <img src={attempt.preview_url} alt={tr('Invoice preview', '发票预览')} className="block w-full" />
-        {overlays}
+        {preview?.url === attempt.preview_url ? <>
+          <img src={preview.blob} alt={tr('Invoice preview', '发票预览')} className="block w-full" />
+          {overlays}
+        </> : <p className="p-4 text-sm text-ink2">{previewFailed ? tr('Preview unavailable. Reopen after checking access.', '预览不可用。请检查权限后重新打开。') : tr('Loading invoice preview…', '正在加载发票预览…')}</p>}
       </div>
     )
   }

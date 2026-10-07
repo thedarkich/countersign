@@ -1,37 +1,54 @@
 # Countersign backend
 
-Phase 2 is in progress. The invoice workflow and chain adapter are implemented and tested locally. There is no deployed API server yet.
+The invoice pipeline, transaction adapter and HTTP API are implemented. The four frontend routes have been exercised against the real local API with simulated AI/chain adapters. Funded-network end-to-end acceptance and public deployment remain pending. See [the full backend overview](../docs/BACKEND_STATUS.md).
 
-Implemented:
+## Implemented
 
 - Bounded PDF/image/text ingestion, visual extraction, hidden-text inspection, vendor/PO matching and exact amount/invoice-hash conversion.
-- Guarded and deliberately naive decision paths, five tracked steps, SQLite persistence, three concurrent pipelines and atomic job claiming.
-- Agent/network/vault identity snapshots, actual provider model IDs, guard version and server-derived scenario for later reputation aggregation.
+- Guarded and deliberately naive decision paths, five tracked steps, SQLite persistence, three workers and a bounded queue.
+- Agent/network/vault snapshots, actual provider model IDs, guard version and server-derived scenario for later reputation aggregation.
 - TokenRouter transport with paid calls disabled by default, bounded outputs, an hourly process-local call ceiling and no automatic paid retries. This ceiling is not a dollar budget.
-- Legacy transaction signing, per-agent serialization, one nonce-resync retry and receipt checks against the network, vault, agent and proposal. Reverts and unconfirmed outcomes remain errors. No `eth_getLogs` dependency.
-- Idempotent receipt-event storage. Read-only reconciliation, owner-transaction reporting, periodic state caches and Blockscout backfill are still pending.
+- Legacy transaction signing, per-agent serialization, nonce resynchronization and receipt checks against the network, vault, agent and proposal. Reverts and unconfirmed outcomes remain errors. No `eth_getLogs` dependency.
+- Public config/registry, attempts, stats, leaderboard, ledger and evaluation-result reads; authenticated team submissions, demo manifest, clean-batch runs and owner-receipt reporting.
+- Admin authentication, durable per-device/nickname/global rate limits, upload validation, private preview access, sanitized bilingual errors and explicit public response projections.
+- Pinned-block chain-state reads with a final canonical-block check, periodic refresh and persisted cache records; idempotent receipt-event storage. Fresh cached reads do not wait for a background refresh.
 
-Run in Ubuntu:
+## Run locally
+
+Use the Ubuntu checkout. Configure private settings locally using the variable names in `.env.example`; never commit runtime secrets.
+
+```bash
+cd ~/countersign/frontend
+npm ci
+npm run build
+cd ../backend
+uv sync --frozen
+uv run --frozen uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1
+```
+
+Open `http://127.0.0.1:8000/#/ledger`. The API serves the frontend's production `dist/` when it exists. For frontend development, Vite proxies `/api` to port 8000. A configured vault is required for verified chain-state responses; unavailable state returns a sanitized 503, not invented balances.
+
+`LLM_ENABLED`, `TRANSACTIONS_ENABLED`, `BOUNTY_ENABLED` and `BATCH_ENABLED` default to false and have separate purposes. The current approximately $2 allowance is for small tests only; public AI traffic and paid batches remain disabled. Mainnet owner signing is never part of this backend. Use one backend process: workers, model-call accounting and transaction locks are process-local.
+
+On restart, unfinished attempts become `INTERRUPTED_REVIEW_REQUIRED` errors and preserve any broadcast hash. They are never automatically resubmitted. Read-only receipt reconciliation is still required before recovering those jobs. The persisted state cache is diagnostic; startup requests require a newly verified snapshot.
+
+## Checks
 
 ```bash
 cd ~/countersign/backend
-uv sync --frozen
-uv run --frozen pytest -q
 uv run --frozen ruff check app tests integration ../scripts/configure_wallets.py
-```
-
-The 57 default tests use synthetic documents, HTTP mocks and temporary SQLite files. They make no paid requests and do not use the project `.env` or real wallet keys. The private helper's tests generate disposable keys in memory and use temporary files only.
-
-The seven integration tests start isolated Anvil nodes on loopback, deploy the actual vault and use disposable accounts. They cover successful payment, policy blocks, non-policy revert, concurrent nonces, resynchronization, receipt deduplication, identity checks, registry updates, and the full pipeline with mocked AI.
-
-```bash
-cd ~/countersign/contracts && forge build
+uv run --frozen pytest -q
+cd ../contracts && forge build
 cd ../backend
 uv run --frozen pytest -q integration/
 ```
 
-`LLM_ENABLED=false` and `TRANSACTIONS_ENABLED=false` are independent defaults. The current $2 allowance is for small tests only; public AI traffic and paid batches remain disabled. Mainnet owner signing is never part of this backend. Use one backend process: the worker semaphore, hourly model ceiling and transaction locks are process-local. A repeated job is never automatically resubmitted; interrupted jobs and ambiguous broadcast hashes require read-only receipt reconciliation before recovery.
+Recorded on 7 October: **81 unit/API tests and 8 isolated Anvil integration tests passed**. The default tests use synthetic documents, HTTP mocks and temporary SQLite files, without the project `.env`, real keys or paid requests. Integration tests deploy the actual vault on loopback Anvil with disposable accounts and mocked AI. They cover payments/blocks/reverts, concurrent nonces, resynchronization, receipt identity/deduplication, owner changes, registry reads and the full pipeline.
 
-Uploads are untrusted. PDFs are limited to 20 pages and 200,000 text-layer characters; images to 20 million pixels, in addition to the 5 MB limit. Only two PDF pages are rendered; later pages trigger refusal in the guarded path. Hidden text does not enter the initial vision request. The naive path intentionally receives the full text layer. No uploaded URL is fetched. Chain views provide payouts and remaining budgets. Offline evaluation disables only duplicate and remaining-budget checks.
+Browser verification covered authenticated Inbox submissions, private PDF previews, both-agent outcomes, Controls registry data, Ledger receipts and Bounty submission/polling. AI and chain responses were simulated. A separate read-only BOT testnet check at block 25969339 returned three vendors, three POs, two agents and a vault balance of 19.9 tUSDT. No paid AI calls or public-chain writes were made for this milestone.
 
-Pending: API/auth/rate limiting and response projections, CLI, dataset generator, indexing recovery/backfill and caches, deployment, public reputation aggregation and frontend wiring. Real-fixture AI quality and funded-network end-to-end acceptance are unverified.
+Uploads are untrusted. PDFs are limited to 20 pages and 200,000 text-layer characters; images to 20 million pixels, in addition to the 5 MB file limit. Only two PDF pages are rendered; later pages trigger refusal in the guarded path. Hidden text does not enter the initial vision request. The naive path intentionally receives the full text layer. No uploaded URL is fetched. Offline evaluation disables only duplicate and remaining-budget checks.
+
+## Remaining
+
+Dataset/CLI, read-only receipt recovery and Blockscout backfill/reorg repair, persistent public reputation, evaluation tooling, deployment and real-model/funded-network acceptance. The clean-folder JSON batch used by the UI works; the specification's additional multipart batch-upload mode is not implemented. Statistics cover locally indexed receipts and do not yet claim complete chain history.

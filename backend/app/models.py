@@ -69,3 +69,26 @@ class ChainEvent(SQLModel, table=True):
     block_time: str
     name: str
     args: dict = Field(sa_column=Column(JSON, nullable=False))
+
+
+class RateBucket(SQLModel, table=True):
+    key: str = Field(primary_key=True)
+    count: int = 0
+    expires_at: int = Field(index=True)
+
+
+class SubmissionMeta(SQLModel, table=True):
+    attempt_id: str = Field(primary_key=True)
+    ip_hash: str | None = None
+
+
+class BatchRecord(SQLModel, table=True):
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    created_at: str = Field(default_factory=now_iso)
+    attempt_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
+
+
+class StateCache(SQLModel, table=True):
+    network: str = Field(primary_key=True)
+    updated_at: str = Field(default_factory=now_iso)
+    payload: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))

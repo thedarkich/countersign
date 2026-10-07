@@ -45,3 +45,11 @@ class Settings(BaseSettings):
     ip_hash_salt: SecretStr = Field(default=SecretStr(""), repr=False)
     public_base_url: str = "http://localhost:8000"
     data_dir: Path = ROOT / "data"
+    static_dir: Path = ROOT / "frontend" / "dist"
+    bounty_enabled: bool = False
+    batch_enabled: bool = False
+    queue_capacity: int = Field(default=60, ge=3, le=200)
+    rate_device_per_min: int = Field(default=3, ge=1)
+    rate_device_per_day: int = Field(default=30, ge=1)
+    rate_nickname_per_day: int = Field(default=30, ge=1)
+    rate_global_per_min: int = Field(default=60, ge=1)

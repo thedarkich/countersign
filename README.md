@@ -8,17 +8,17 @@ Countersign is an invoice-payment demo for the 汉客松 S1 & ETH Wuhan 2026 hac
 
 The rules bound spending authority. They do **not** prove an invoice is genuine: a convincing fake can still pay a registered vendor within the approved limits.
 
-## Current build — 6 October 2026
+## Current build — 7 October 2026
 
 | Part | What works | What remains |
 |---|---|---|
-| Frontend | Four redesigned screens, English/Chinese, light/dark themes, mobile layout and interactive mock flows | Connect the screens to the real API |
+| Frontend | Four redesigned screens, English/Chinese, themes, mobile layout; local HTTP API flows checked | Live-model/funded-network acceptance and public deployment |
 | Vault | Tested Solidity contract; verified BOT testnet deployment and real payment/block receipts | Mainnet funding and deployment |
-| Backend | Invoice pipeline, guarded/naive paths, persistence, bounded model client and legacy transaction/receipt adapter | HTTP API, authentication/rate limits, recovery/backfill, dataset/CLI and deployed end-to-end flow |
+| Backend | Invoice pipeline, HTTP API, authentication/rate limits, private previews, persistence, model/transaction adapters and chain-state reads | Recovery/backfill, dataset/CLI, reputation/evaluation and deployed end-to-end flow |
 | Agent reputation | Bounded activity summaries in the mock interface | Persistent public reputation with source/version metadata and evidence per SPEC §3.11 |
 | Bounty and evaluation | Mock submission flow and documented design | Approved public launch, real attack collection and held-out evaluation |
 
-The frontend is a **mock demo**, not a live view of the deployed vault. There is no publicly deployed application link yet. The existing VPS page is only a connectivity check. See [current progress](docs/PROGRESS.md) for acceptance evidence and remaining work.
+The frontend supports mock mode and the implemented local API. Browser API checks used simulated AI/chain adapters; separate read-only checks verified the deployed testnet vault. There is no publicly deployed application link yet. The existing VPS page is only a connectivity check. See the [full backend overview](docs/BACKEND_STATUS.md) and [current progress](docs/PROGRESS.md) for evidence and remaining work.
 
 ## Try the frontend
 
@@ -96,9 +96,9 @@ uv run --frozen pytest -q
 uv run --frozen pytest -q integration/
 ```
 
-Recorded results for the current implementation: **92 contract tests, 57 backend tests and 7 isolated Anvil integration tests passed**. The default and Anvil suites use mocks/disposable local accounts; they do not spend model credit or broadcast public-chain transactions. Test details and limits: [backend README](backend/README.md) and [contract review](docs/security/CONTRACT_REVIEW.md).
+Recorded results for the current implementation: **92 contract tests, 81 backend tests and 8 isolated Anvil integration tests passed**. The default and Anvil suites use mocks/disposable local accounts; they do not spend model credit or broadcast public-chain transactions. Test details and limits: [backend README](backend/README.md) and [contract review](docs/security/CONTRACT_REVIEW.md).
 
-The backend HTTP server is not implemented yet. Do not expect `uvicorn app.main:app` to work at this checkpoint. Paid model calls and real transactions are disabled by default; the current model allowance is small tests only.
+The HTTP server is implemented: run `uv run --frozen uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1` from `backend/`. It serves the production frontend build when present. Paid model calls, real transactions, public bounty admission and paid batches are disabled by default; the current model allowance is small tests only. See the [backend run instructions](backend/README.md).
 
 ## Working together
 

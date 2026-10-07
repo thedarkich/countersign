@@ -284,3 +284,33 @@ def test_full_pipeline_clean_pays_and_naive_attack_is_blocked(live):
     assert attack.outcome == "blocked" and attack.block_reason == "PayoutMismatch"
     assert attack.ai_fooled and attack.scenario == "known_attack"
     assert live[3].get(clean.id).outcome == "paid"
+
+
+def test_public_state_cache_and_owner_receipt_use_real_views(live, tmp_path):
+    from app.api.schemas import AppConfig, Registry
+    from app.chain.state import read_state, report_receipt
+    from app.config import Settings
+
+    w3, contract, client, store, guarded, vendor, attacker, owner_tx = live
+    settings = Settings(_env_file=None, data_dir=tmp_path)
+    initial = read_state(client, "testnet", settings)
+    assert AppConfig.model_validate(initial["config"]).owner_address == w3.eth.accounts[0]
+    assert Registry.model_validate(initial["registry"]).vault_balance == "20"
+    assert initial["registry"]["pending_changes"] == []
+    receipt = owner_tx(contract.functions.queueSetPayout(1, attacker))
+    pending = read_state(client, "testnet", settings)["registry"]["pending_changes"]
+    assert len(pending) == 1 and pending[0]["kind"] == "SetPayout"
+    assert pending[0]["decoded"] == {"vendor_id": 1, "new_payout": attacker.lower()}
+    events = report_receipt(
+        client, "testnet", Web3.to_hex(receipt["transactionHash"]), store.engine
+    )
+    assert events[0]["name"] == "ChangeQueued"
+    report_receipt(client, "testnet", Web3.to_hex(receipt["transactionHash"]), store.engine)
+    with Session(store.engine) as session:
+        assert len(session.exec(select(ChainEvent)).all()) == 1
+    wrong = w3.eth.send_transaction(
+        {"from": w3.eth.accounts[0], "to": vendor, "value": 1, "gasPrice": w3.eth.gas_price}
+    )
+    w3.eth.wait_for_transaction_receipt(wrong)
+    with pytest.raises(ChainSendError):
+        report_receipt(client, "testnet", Web3.to_hex(wrong), store.engine)
