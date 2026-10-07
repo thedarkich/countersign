@@ -1,6 +1,10 @@
 # Backend deployment and recovery
 
-Latest verified release: **countersign-api:abffa3c**, `/opt/countersign/releases/abffa3c`, deployed 7 October 2026 (frontend-only: landing motion effects and new hero copy; backend layers unchanged from `c56dded`). Immediate rollback: `c56dded`. Backup: `/opt/countersign/shared/data/backups/pre-landing-abffa3c.db`. Private runtime configuration was copied from `c56dded` unread. HTTPS before/after comparison: config, all 21 ledger records, registry, stats, health and reputation data unchanged; team reads 401, closed bounty 503; new bundle `index-BxFIL09I.css` served with no browser errors. AI/payment/bounty/batch admission remains disabled. For current operations use `IMAGE_TAG=abffa3c` in that release directory with `COUNTERSIGN_DATA_DIR=/opt/countersign/shared/data`; older release entries below are historical.
+Latest verified release: **countersign-api:ddaffbd**, `/opt/countersign/releases/ddaffbd`, deployed 7 October 2026 (frontend-only: teammate landing layout and fox logo with our palette; backend code unchanged from `c56dded`). Immediate rollback: `abffa3c`. Backup: `/opt/countersign/shared/data/backups/pre-landing-ddaffbd.db`. Private runtime configuration was copied from `abffa3c` unread. HTTPS before/after comparison: config, all 21 ledger records, registry, stats and health unchanged; reputation changed only in sync freshness fields; team reads 401, closed bounty 503; new bundle `index-CPkmsbDs.css` and the logo served. AI/payment/bounty/batch admission remains disabled. For current operations use `IMAGE_TAG=ddaffbd` in that release directory with `COUNTERSIGN_DATA_DIR=/opt/countersign/shared/data`; older release entries below are historical.
+
+When scripting `docker compose exec` over an SSH heredoc, give it `-T` and `< /dev/null`; otherwise it reads the rest of the heredoc as its own stdin and the remaining commands never run.
+
+Previous release: `countersign-api:abffa3c` (landing motion effects and new hero copy), rollback `c56dded`, backup `pre-landing-abffa3c.db`.
 
 BOT mainnet rollout: not yet executed. See [MAINNET_RUNBOOK.md](MAINNET_RUNBOOK.md), rehearsed on a local fork of mainnet.
 
