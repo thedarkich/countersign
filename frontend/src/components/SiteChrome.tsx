@@ -1,14 +1,29 @@
+import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { clearAdminToken, getAdminToken } from '../api/client'
+import { useAuth } from '../lib/auth'
 import { useLang } from '../i18n'
 import { LangSwitch, ThemeSwitch } from './Toggles'
 
 export function SiteHeader({ workspace = false, network, mock = false }: { workspace?: boolean; network?: string; mock?: boolean }) {
   const { tr } = useLang()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   const queries = useQueryClient()
-  const authorized = !!getAdminToken()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const signedIn = !!user || !!getAdminToken()
+  async function signOut() {
+    setBusy(true); setError('')
+    try {
+      if (user) await logout()
+      clearAdminToken()
+      queries.clear()
+      navigate('/login', { replace: true })
+    } catch { setError(tr('Could not sign out. Please retry.', '退出未完成，请重试。')) }
+    finally { setBusy(false) }
+  }
   const links = workspace
     ? [['/inbox', tr('Inbox', '发票工作台')], ['/ledger', tr('Ledger', '账本')], ['/controls', tr('Controls', '管理控制台')], ['/bounty', tr('Challenge', '挑战防线')]]
     : [['/?section=workflow', tr('How it works', '工作流程')], ['/?section=stack', tr('Building blocks', '核心能力')], ['/inbox', tr('Workspace', '工作台')]]
@@ -17,9 +32,14 @@ export function SiteHeader({ workspace = false, network, mock = false }: { works
       <Link to="/" className="site-brand" aria-label={tr('Countersign home', 'Countersign 首页')}><img src="/countersign-logo.png" alt="Countersign" className="brand-logo" /></Link>
       <div className="site-actions">
         <LangSwitch /><ThemeSwitch />
-        {authorized && workspace ? <button type="button" className="site-button secondary" onClick={() => { clearAdminToken(); queries.clear(); navigate('/login', { replace: true }) }}>{tr('Sign out', '退出登录')}</button>
-          : authorized ? <Link className="site-button" to="/inbox">{tr('Open workspace', '进入工作台')} <span aria-hidden>→</span></Link>
-            : <><Link className="site-signin" to="/login">{tr('Sign in', '登录')}</Link><Link className="site-button" to="/login">{tr('Get started', '开始使用')} <span aria-hidden>→</span></Link></>}
+        {signedIn ? <>
+          <span className="account-label" title={user?.email}>{user ? user.name : tr('Team token', '团队令牌')}</span>
+          {workspace ? <button type="button" className="site-button secondary" disabled={busy} onClick={() => void signOut()}>{busy ? tr('Signing out…', '正在退出…') : tr('Sign out', '退出登录')}</button>
+            : <Link className="site-button" to="/inbox">{tr('Open workspace', '进入工作台')} <span aria-hidden>→</span></Link>}
+        </> : <>
+          <Link className="site-signin" to="/login">{tr('Sign in', '登录')}</Link>
+          <Link className="site-button" to="/signup">{tr('Get started', '开始使用')} <span aria-hidden>→</span></Link>
+        </>}
       </div>
     </div>
     <div className="site-subbar">
@@ -28,6 +48,7 @@ export function SiteHeader({ workspace = false, network, mock = false }: { works
       </nav>
       {workspace && <span className="site-network"><span className="status-dot" />{mock ? tr('Mock data · Simulated workspace', '演示数据 · 模拟工作台') : network}</span>}
     </div>
+    {error && <p className="site-error" role="alert">{error}</p>}
   </header>
 }
 

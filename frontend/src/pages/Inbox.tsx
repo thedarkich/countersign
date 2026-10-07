@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { api, AuthError, clearAdminToken } from '../api/client'
+import { useAuth } from '../lib/auth'
 import type { AgentKind, Attempt, BatchSummary, DemoInvoice, Source } from '../api/types'
 import { useLang } from '../i18n'
 import { Icon } from '../components/Icon'
@@ -38,6 +40,8 @@ export default function InboxPage() {
 
 function Inbox() {
   const { tr } = useLang()
+  const { refresh } = useAuth()
+  const navigate = useNavigate()
   const qc = useQueryClient()
   const [target, setTarget] = useState<Target>('both')
   const [source, setSource] = useState<Source | 'all'>('all')
@@ -73,16 +77,17 @@ function Inbox() {
   if (list.error instanceof AuthError) {
     return (
       <div className="mx-auto mt-16 max-w-sm px-4">
-        <p className="font-semibold text-cinnabar">{tr("That token didn't work.", '令牌不对。')}</p>
+        <p className="font-semibold text-cinnabar">{tr('Your session ended or the access was rejected.', '登录已失效或访问被拒绝。')}</p>
         <button
           type="button"
           className="btn btn-line mt-3"
           onClick={() => {
             clearAdminToken()
-            window.location.reload()
+            qc.clear()
+            void refresh().then(() => navigate('/login?next=/inbox', { replace: true }))
           }}
         >
-          {tr('Enter it again', '重新输入')}
+          {tr('Sign in again', '重新登录')}
         </button>
       </div>
     )

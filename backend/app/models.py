@@ -130,3 +130,22 @@ class EventAudit(SQLModel, table=True):
     recorded_at: str = Field(default_factory=now_iso)
     reason: str
     payload: dict = Field(sa_column=Column(JSON, nullable=False))
+
+
+class UserAccount(SQLModel, table=True):
+    """Invite-only team workspace account. Grants team API access, never wallet authority."""
+
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    email: str = Field(unique=True, index=True)
+    name: str
+    password_hash: str
+    created_at: str = Field(default_factory=now_iso)
+
+
+class UserSession(SQLModel, table=True):
+    """Only the SHA-256 of the session cookie is stored."""
+
+    token_hash: str = Field(primary_key=True)
+    user_id: str = Field(index=True)
+    expires_at: int = Field(index=True)
+    created_at: str = Field(default_factory=now_iso)

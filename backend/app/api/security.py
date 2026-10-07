@@ -3,22 +3,27 @@ import hashlib
 import hmac
 import time
 import unicodedata
+from urllib.parse import urlparse
 from uuid import UUID
 
 from fastapi import HTTPException, Request
 from sqlalchemy import delete, select, text
 from sqlalchemy.dialects.sqlite import insert
+from sqlmodel import Session
 from starlette.responses import JSONResponse
 
-from app.models import RateBucket
+from app.models import RateBucket, UserAccount, UserSession
 from app.pipeline.ingest import MAX_BYTES
+
+SESSION_COOKIE = "countersign_session"
+SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 
 def problem(status, en, zh):
     return HTTPException(status_code=status, detail={"message_en": en, "message_zh": zh})
 
 
-def is_admin(request: Request):
+def has_admin_token(request: Request):
     expected = request.app.state.runtime.settings.admin_token.get_secret_value()
     scheme, _, supplied = request.headers.get("authorization", "").partition(" ")
     return bool(
@@ -28,9 +33,49 @@ def is_admin(request: Request):
     )
 
 
+def session_digest(token: str):
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def session_user(request: Request):
+    """The signed-in account for this request's session cookie, or None. Looked up once per request."""
+    if "session_user" not in request.scope:
+        token = request.cookies.get(SESSION_COOKIE, "")
+        user = None
+        if 20 <= len(token) <= 128:
+            with Session(request.app.state.runtime.store.engine) as session:
+                row = session.execute(
+                    select(UserAccount.id, UserAccount.name, UserAccount.email)
+                    .join(UserSession, UserSession.user_id == UserAccount.id)
+                    .where(
+                        UserSession.token_hash == session_digest(token),
+                        UserSession.expires_at > int(time.time()),
+                    )
+                ).first()
+            if row:
+                user = {"id": row.id, "name": row.name, "email": row.email}
+        request.scope["session_user"] = user
+    return request.scope["session_user"]
+
+
+def same_origin(request: Request):
+    """Cookie-authorized writes must come from this site (SameSite=Strict is the first line)."""
+    origin = urlparse(request.headers.get("origin", ""))
+    allowed = {request.url.netloc, urlparse(request.app.state.runtime.settings.public_base_url).netloc}
+    return origin.scheme in {"http", "https"} and origin.netloc in allowed - {""}
+
+
+def is_admin(request: Request):
+    return has_admin_token(request) or session_user(request) is not None
+
+
 def require_admin(request: Request):
-    if not is_admin(request):
-        raise problem(401, "Admin token required.", "需要管理员令牌。")
+    if has_admin_token(request):
+        return
+    if session_user(request) is None:
+        raise problem(401, "Sign in or provide the team token.", "请登录或提供团队令牌。")
+    if request.method not in SAFE_METHODS and not same_origin(request):
+        raise problem(403, "Cross-site request refused.", "已拒绝跨站请求。")
 
 
 def device_id(request: Request, *, required=False):

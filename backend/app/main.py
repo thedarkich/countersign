@@ -16,6 +16,7 @@ from sqlmodel import Session, select
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from web3.exceptions import TransactionNotFound
 
+from app.api.accounts import router as accounts
 from app.api.reputation import ReputationView, build_reputation
 from app.api.runtime import Runtime
 from app.api.schemas import (
@@ -341,6 +342,7 @@ def create_app(settings=None, *, runtime=None):
         return {"decoded_events": events}
 
     app.include_router(team)
+    app.include_router(accounts)
 
     @app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
     async def unknown_api(path: str):

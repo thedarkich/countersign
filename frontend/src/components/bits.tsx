@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { shortAddr } from '../lib/format'
 import { useLang } from '../i18n'
 import { getAdminToken } from '../api/client'
+import { useAuth } from '../lib/auth'
 import { Navigate, useLocation } from 'react-router-dom'
 import type { EvalResults } from '../api/types'
 
@@ -58,9 +59,13 @@ export function Countdown({ to, onDone }: { to: string; onDone?: () => void }) {
   return <span className="num cond font-bold">{txt}</span>
 }
 
+/** Team pages open for a signed-in account or the team access token. */
 export function AdminGate({ children }: { children: ReactNode }) {
   const location = useLocation()
-  if (getAdminToken()) return <>{children}</>
+  const { user, loading } = useAuth()
+  const { tr } = useLang()
+  if (user || getAdminToken()) return <>{children}</>
+  if (loading) return <div className="session-state" role="status">{tr('Checking your session…', '正在检查登录状态…')}</div>
   return <Navigate to={'/login?next=' + encodeURIComponent(location.pathname)} replace />
 }
 

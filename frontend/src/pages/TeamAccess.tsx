@@ -37,7 +37,7 @@ export default function TeamAccess() {
         <form className="mt-7" onSubmit={submit}><label className="auth-field">{tr('Team access token', '团队访问令牌')}<input type="password" required autoComplete="off" value={token} onChange={e => setToken(e.target.value)} spellCheck={false} /></label>
           {error && <p className="auth-message" role="alert">{error}</p>}
           <button className="site-button auth-submit" disabled={busy || !token.trim()}>{busy ? tr('Checking access…', '正在验证…') : tr('Open workspace', '进入工作台')} <span aria-hidden>→</span></button>
-        </form><p className="auth-access-note">{tr('The ledger and agent history are public. You do not need an account to view them.', '账本和 Agent 历史公开可见，无需创建账户。')}</p><Link className="auth-switch block" to="/ledger">{tr('View public ledger', '查看公开账本')} →</Link>
+        </form><p className="auth-access-note">{tr('The ledger and agent history are public. You do not need an account to view them.', '账本和 Agent 历史公开可见，无需创建账户。')}</p><Link className="auth-switch block" to="/ledger">{tr('View public ledger', '查看公开账本')} →</Link><Link className="auth-switch block" to="/login">{tr('Sign in with your account instead', '改用账户登录')} →</Link>
       </section>
     </main><SiteFooter /></div>
 }

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useLang } from '../i18n'
 import { SiteHeader, SiteFooter } from '../components/SiteChrome'
 import { api, getAdminToken } from '../api/client'
+import { useAuth } from '../lib/auth'
 import '../landing.css'
 
 /** Fades `.reveal` elements in as they scroll into view, then hands them back to their own styles (hover lifts, transitions). */
@@ -55,7 +56,10 @@ export default function LandingPage() {
   const network = config.data?.network
   const preview = api.mode === 'mock' ? tr('MOCK PREVIEW', '模拟预览') : network === 'testnet' ? tr('BOT TESTNET PREVIEW', 'BOT 测试网预览') : network === 'mainnet' ? tr('BOT MAINNET', 'BOT 主网') : tr('CONNECTING', '正在连接')
   const note = api.mode === 'mock' ? tr('Mock data · Nothing is sent on-chain', '模拟数据 · 不发送链上交易') : network === 'testnet' ? tr('BOT Chain testnet · Test tokens only', 'BOT Chain 测试网 · 仅使用测试代币') : network === 'mainnet' ? tr('BOT Chain mainnet', 'BOT Chain 主网') : ''
-  const workspace = getAdminToken() ? '/inbox' : '/login'
+  const { user } = useAuth()
+  const signedIn = !!user || !!getAdminToken()
+  const workspace = signedIn ? '/inbox' : '/login'
+  const start = signedIn ? '/inbox' : '/signup'
   const [params] = useSearchParams()
   const [demo, setDemo] = useState<'request' | 'rules' | 'receipt'>('request')
   const [copied, setCopied] = useState(false)
@@ -74,12 +78,12 @@ export default function LandingPage() {
   ]
   return <div className="public-site landing-page"><SiteHeader />
     <main className="landing-main" id="main-content" tabIndex={-1}>
-      <div className="campaign-strip reveal"><span className="mono-label">◆ {preview}</span><strong>{tr('Let agents work. Keep payments within your rules.', '让 Agent 工作，让付款遵循你的规则。')}</strong><Link to={workspace} className="site-button">{tr('Get started', '开始使用')} <span aria-hidden>→</span></Link></div>
+      <div className="campaign-strip reveal"><span className="mono-label">◆ {preview}</span><strong>{tr('Let agents work. Keep payments within your rules.', '让 Agent 工作，让付款遵循你的规则。')}</strong><Link to={start} className="site-button">{tr('Get started', '开始使用')} <span aria-hidden>→</span></Link></div>
       <section className="hero-card reveal" style={delay(60)}>
         <div className="hero-copy reveal" style={delay(120)}><p className="mono-label">// {tr('YOUR RULES. EVERY PAYMENT.', '每笔付款，你来定规则。')}</p>
           <h1>{tr('AI checks the invoice.', 'AI 审票。')}<br /><span>{tr('The contract calls the shots.', '合约拍板。')}</span></h1>
           <p>{tr('AI checks invoices. Your contract enforces your payment rules.', 'AI 检查发票，智能合约按你设定的规则放行或拒付。')}</p>
-          <div className="hero-actions"><Magnetic><Link to={workspace} className="site-button">{tr('Open your workspace', '开启工作台')} <span aria-hidden>→</span></Link></Magnetic><Link to="/login" className="site-button secondary">{tr('Sign in', '登录')}</Link></div>
+          <div className="hero-actions"><Magnetic><Link to={start} className="site-button">{tr('Open your workspace', '开启工作台')} <span aria-hidden>→</span></Link></Magnetic>{!signedIn && <Link to="/login" className="site-button secondary">{tr('Sign in', '登录')}</Link>}</div>
           {note && <p className="hero-note">{note}</p>}
         </div>
         <div className="hero-demo reveal" style={delay(240)}><p className="mono-label">◆ {tr('ONE REQUEST. CLEAR BOUNDARIES.', '一笔请求，清晰的边界。')}</p>
