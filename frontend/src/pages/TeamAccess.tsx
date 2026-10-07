@@ -29,7 +29,7 @@ export default function TeamAccess() {
   }
   return <div className="public-site"><SiteHeader />
     <main className="auth-main" tabIndex={-1}>
-      <div className="auth-intro"><p className="mono-label">// {tr('YOUR RULES. EVERY PAYMENT.', '每笔付款，你来定规则。')}</p><h1>{tr('Give your AI', '让你的 AI')}<br /><span>{tr('room to work.', '放手工作。')}</span><br />{tr('Keep control.', '让权限有边界。')}</h1><p>{tr('Review invoices, inspect agent decisions and manage the rules that protect your vault.', '审核发票、查看 Agent 决策，管理保护金库的规则。')}</p>
+      <div className="auth-intro"><p className="mono-label">// {tr('YOUR RULES. EVERY PAYMENT.', '每笔付款，你来定规则。')}</p><h1>{tr('AI checks the invoice.', 'AI 审票。')}<br /><span>{tr('The contract calls the shots.', '合约拍板。')}</span></h1><p>{tr('AI checks invoices. Your contract enforces your payment rules.', 'AI 检查发票，智能合约按你设定的规则放行或拒付。')}</p>
         <div className="auth-flow">{[[tr('Agent requests', 'Agent 提出付款'), tr('Invoice and payment details', '发票与付款信息')], [tr('Rules check', '检查付款规则'), tr('Supplier, purchase order and limits', '供应商、采购单与额度')], [tr('Owner stays in control', '所有者掌控权限'), tr('Wallet signatures and time-locked changes', '钱包签名与延时规则变更')]].map(([title, text], i) => <div className="auth-flow-row" key={title}><span>{i === 2 ? '✓' : '0' + (i + 1)}</span><div><strong>{title}</strong><p>{text}</p></div></div>)}</div>
       </div>
       <section className="auth-card" aria-labelledby="access-title"><p className="mono-label">{tr('TEAM ACCESS', '团队访问')}</p><h2 id="access-title">{tr('Open your workspace.', '进入团队工作台。')}</h2><p className="auth-subtitle">{tr('Use the access token provided by your team owner. Owner actions also require the owner wallet.', '使用团队负责人提供的访问令牌。所有者操作还需要所有者钱包签名。')}</p>

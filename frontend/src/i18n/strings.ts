@@ -12,7 +12,7 @@ export const zh = {
   copied: '已复制',
 
   // bounty
-  hero: '骗过我们的 AI，或者抢走金库。',
+  hero: '骗过我们的 AI，抢走金库。',
   hero_sub: 'AI 负责看发票、提付款，钱放在 BOT Chain 上的金库合约里。合约只认登记过的供应商、登记过的收款地址和人批过的预算。看你能不能让它把钱付给你。',
   prize_fool_title: '骗过 AI',
   prize_fool_body: '让带防护的 Agent 提出一笔不该付的款。',
@@ -145,7 +145,7 @@ export const en: Strings = {
   mock_badge: 'Mock data',
   copied: 'copied',
 
-  hero: 'Fool our AI. Or rob our vault.',
+  hero: 'Fool our AI. Rob our vault.',
   hero_sub:
     'The AI reads invoices and proposes payments. The money sits in a vault contract on BOT Chain, which only pays registered vendors, at their registered address, inside a budget someone signed off. See if you can get it to pay you.',
   prize_fool_title: 'Fool our AI',
