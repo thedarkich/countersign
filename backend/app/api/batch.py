@@ -4,6 +4,7 @@ from app.api.security import problem
 from app.models import BatchRecord
 from app.pipeline.ingest import MAX_BYTES
 from app.pipeline.runner import new_attempt
+from app.storage import write_private_bytes
 
 
 async def create_batch(runtime):
@@ -18,6 +19,8 @@ async def create_batch(runtime):
             400, "No clean training fixtures have been generated.", "尚未生成干净训练发票。"
         )
     async with runtime.admission:
+        # The request may have waited behind another batch while gates changed.
+        runtime.check_submission(batch=True)
         if len(entries) > runtime.queue.maxsize - runtime.queue.qsize():
             raise problem(
                 503, "Not enough queue space for this batch.", "队列空间不足，无法接收此批次。"
@@ -43,23 +46,25 @@ async def create_batch(runtime):
                 )
                 if document.images:
                     preview = runtime.settings.data_dir / "previews" / (attempt.id + ".png")
-                    preview.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-                    preview.write_bytes(document.images[0])
-                    preview.chmod(0o600)
+                    write_private_bytes(preview, document.images[0])
                     previews.append(preview)
                     attempt.preview_path = str(preview)
-                prepared.append((attempt, document))
-            record = BatchRecord(attempt_ids=[a.id for a, _ in prepared])
+                prepared.append(attempt)
+                del document
+            runtime.check_submission(batch=True)
+            record = BatchRecord(attempt_ids=[a.id for a in prepared])
             batch_id = record.id
-            jobs = [(a.id, document) for a, document in prepared]
+            jobs = [a.id for a in prepared]
             with Session(runtime.store.engine) as session:
-                session.add_all([a for a, _ in prepared])
+                session.add_all(prepared)
                 session.add(record)
                 session.commit()
             for job in jobs:
                 runtime.queue.put_nowait(job)
             return {"batch_id": batch_id}
-        except Exception:
+        except BaseException:
+            # Cancellation must clean only files created by this uncommitted batch.
+            # CancelledError is a BaseException; always propagate after cleanup.
             for path in previews:
                 path.unlink(missing_ok=True)
             raise

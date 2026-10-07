@@ -4,6 +4,7 @@ import json
 import os
 import time
 from contextlib import suppress
+from pathlib import Path
 
 from sqlmodel import Session, select
 
@@ -16,7 +17,7 @@ from app.chain.state import read_state, report_receipt
 from app.db import AttemptStore
 from app.models import Attempt, StateCache, now_iso
 from app.pipeline.extract import InvoiceModels
-from app.pipeline.ingest import ingest_text
+from app.pipeline.ingest import MAX_BYTES, InputError, ingest_text
 from app.pipeline.isolated_ingest import ingest_isolated
 from app.pipeline.runner import PipelineRunner
 
@@ -31,7 +32,9 @@ class Runtime:
         self.models = models or InvoiceModels.from_settings(settings, engine=self.store.engine)
         self.runner = PipelineRunner(self.store, self.models, self.chain)
         self.limiter = RateLimiter(self.store.engine, settings)
-        self.queue = asyncio.Queue(maxsize=settings.queue_capacity)
+        # Retain IDs only. A count-bounded queue of decoded PDFs can still consume
+        # gigabytes; documents are loaded under worker limits when needed.
+        self.queue: asyncio.Queue[str] = asyncio.Queue(maxsize=settings.queue_capacity)
         self.ingest_slots = asyncio.Semaphore(2)
         self.admission = asyncio.Lock()
         self.states = {}
@@ -108,8 +111,13 @@ class Runtime:
 
     async def worker(self):
         while True:
-            attempt_id, document = await self.queue.get()
+            attempt_id = await self.queue.get()
+            document = None
             try:
+                attempt = self.store.get(attempt_id)
+                if attempt.status != "queued":
+                    continue
+                document = await self.load_document(attempt)
                 await self.runner.run(attempt_id, document)
             except asyncio.CancelledError:
                 raise
@@ -119,9 +127,34 @@ class Runtime:
                     attempt = self.store.get(attempt_id)
                     attempt.status = attempt.outcome = "error"
                     attempt.error = "WORKER_ERROR"
+                    attempt.steps = [
+                        dict(
+                            step,
+                            status="failed" if step["name"] == "extract" else "skipped",
+                            detail=attempt.error if step["name"] == "extract" else None,
+                            ended_at=now_iso(),
+                        )
+                        if step["status"] in {"pending", "running"}
+                        else step
+                        for step in attempt.steps
+                    ]
                     self.store.save(attempt)
             finally:
+                # Do not retain the last image while this worker waits for a job.
+                document = None
                 self.queue.task_done()
+
+    async def load_document(self, attempt):
+        if attempt.input_kind == "text":
+            return await self.ingest(text=attempt.input_text or "")
+        path = Path(attempt.file_path or "").resolve(strict=True)
+        roots = [(self.settings.data_dir / folder).resolve() for folder in ("uploads", "invoices")]
+        if not path.is_file() or not any(path.is_relative_to(root) for root in roots):
+            raise InputError("Stored invoice is outside the input directories")
+        # Bound the actual read too, even if the file changed after admission.
+        with path.open("rb") as stream:
+            data = stream.read(MAX_BYTES + 1)
+        return await self.ingest(data=data)
 
     def check_submission(self, *, bounty=False, batch=False):
         if bounty and not self.settings.bounty_enabled:
@@ -140,11 +173,7 @@ class Runtime:
 
     async def ingest(self, *, data=None, text=None):
         async with self.ingest_slots:
-            return (
-                await ingest_isolated(data)
-                if data is not None
-                else ingest_text(text)
-            )
+            return await ingest_isolated(data) if data is not None else ingest_text(text)
 
     async def state(self, network, *, force=False):
         # A background RPC refresh must not block readers of a still-fresh snapshot.

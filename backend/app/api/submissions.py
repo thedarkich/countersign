@@ -9,6 +9,7 @@ from app.api.security import device_id, hash_private, problem
 from app.models import SubmissionMeta
 from app.pipeline.ingest import MAX_BYTES, InputError
 from app.pipeline.runner import new_attempt
+from app.storage import write_private_bytes
 
 
 def clean_label(value, maximum):
@@ -101,16 +102,12 @@ async def submit(request: Request, *, source):
             if data is not None:
                 suffix = ".pdf" if document.kind == "pdf" else ".image"
                 path = runtime.settings.data_dir / "uploads" / (attempt.id + suffix)
-                path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-                path.write_bytes(data)
-                path.chmod(0o600)
+                write_private_bytes(path, data)
                 created.append(path)
                 attempt.file_path = str(path)
             if document.images:
                 preview = runtime.settings.data_dir / "previews" / (attempt.id + ".png")
-                preview.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-                preview.write_bytes(document.images[0])
-                preview.chmod(0o600)
+                write_private_bytes(preview, document.images[0])
                 created.append(preview)
                 attempt.preview_path = str(preview)
             with Session(runtime.store.engine) as session:
@@ -123,7 +120,7 @@ async def submit(request: Request, *, source):
                     )
                 session.commit()
                 attempt_id = attempt.id
-            runtime.queue.put_nowait((attempt_id, document))
+            runtime.queue.put_nowait(attempt_id)
         except Exception:
             for path in created:
                 path.unlink(missing_ok=True)
