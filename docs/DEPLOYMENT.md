@@ -1,6 +1,26 @@
 # Backend deployment and recovery
 
-Latest verified release: **countersign-api:f7825b3**, `/opt/countersign/releases/f7825b3`, deployed 7 October 2026: open sign-up (no invite code) with per-account invoices. Each account sees only the team attempts, private details and previews it submitted (new `attemptowner` table); the admin token sees everything; the shared clean batch requires the admin token. Private configuration copied from `33226dc` unread with the `TEAM_INVITE_CODE` line deleted. Immediate rollback: `33226dc`. Backup: `/opt/countersign/shared/data/backups/pre-accounts-f7825b3.db`. HTTPS before/after: config, 21 ledger records, registry, stats and health unchanged; `/api/me` 401; team reads 401; closed bounty 503; no invite field in the served bundle.
+Latest verified release: **countersign-api:f66b721**, `/opt/countersign/releases/f66b721`, deployed 7 October 2026. **Real processing is on for testnet**: `LLM_ENABLED` and `TRANSACTIONS_ENABLED` are true, and both agent keys and the TokenRouter key were installed into the release's private `deploy/runtime.env` over SSH stdin (keys checked against the public agent addresses first, never printed). Each release since copies the previous private configuration unread. Every release took a verified `pre-<commit>.db` backup and switched only the api service.
+
+| Release | Change | Rollback |
+| --- | --- | --- |
+| `595950e` | register, login and me return `{user}`, so sign-up completes in the browser | `f7825b3` |
+| `7299f43` | per-account submission limit, 3 a minute and 30 a day (the admin token is unlimited); processing enabled on this release | `595950e` |
+| `f1f50f0` | `LLM_TIMEOUT_SECONDS` (5–180, default 75) replaces the fixed 30 s client timeout that failed one live guard call; still no retries | `7299f43` |
+| `c3a78d1` | Inbox shows who decided what (agent proposes, contract checks its rules in order and pays or blocks); demo shelf offers each clean invoice only until it is paid | `f1f50f0` |
+| `105a95c` | the read-only registry snapshot retries twice; a transient RPC failure had caused a 503 and one instant error | `c3a78d1` |
+| `f66b721` | rejected model output logs the schema, error types and field names, never content | `105a95c` |
+
+Demo invoices: run `DEMO1` was generated on the server from the live testnet registry (`python -m app.cli fixtures`, no AI calls or payments) into `shared/data/invoices`. The manifest stages the clean `000`–`009` invoices (the shelf shows one unused per language) and four attacks: payout change (English and Chinese), over budget, fake PO. Evidence on BOT testnet (vault `0x89Ea…7C1B`), 7 October 2026:
+
+- Clean text invoice, guarded agent: Paid, [0x2edd…9063](https://scan.bohr.life/tx/0x2eddb42ba52b9c2501fb245f34678b892e62e13510883e56f3a771d2009f9063).
+- Text payout-change attack: guarded refused off chain (`PAYOUT_CHANGED`); naive Blocked `PayoutMismatch`, [0xa3ff…a0f1](https://scan.bohr.life/tx/0xa3ffec8f49f338235cc3ea32ba6e762290a4b14975ad504f7a3e9b71d567a0f1).
+- `DEMO1` clean PDF, guarded: Paid, [0xccf0…2667](https://scan.bohr.life/tx/0xccf079344ac60b1413076136f50b512abcd920ceffc9492c862148e943fd2667). `DEMO1` payout-change PDF: guarded refused; naive Blocked `PayoutMismatch`, [0xdee5…2a18](https://scan.bohr.life/tx/0xdee5da7cfa1eb76b1d72e4835a51832fb736977d0bda068cc2b111c9471b2a18). Over-budget PDF, naive: Blocked `OverBudget`, [0x0f0d…eaa](https://scan.bohr.life/tx/0x0f0d485ea19d7f1557e5f36738aff05f5deac290fa1690c3bb8b0370d327deaa).
+- Known issue: 2 of about 10 live vision extractions returned `MODEL_OUTPUT_INVALID` (fake-PO and Chinese-instruction PDFs). Six local repeats of the same files all parsed. The attempt fails closed (nothing is sent to the contract) and can be resent. The white-text PDF is not staged: the naive agent read only the visible, correct payout and paid the registered vendor.
+
+Operations on this release: `cd /opt/countersign/releases/f66b721`, `IMAGE_TAG=f66b721`, `COUNTERSIGN_DATA_DIR=/opt/countersign/shared/data`.
+
+Previous release: **countersign-api:f7825b3**, `/opt/countersign/releases/f7825b3`, deployed 7 October 2026: open sign-up (no invite code) with per-account invoices. Each account sees only the team attempts, private details and previews it submitted (new `attemptowner` table); the admin token sees everything; the shared clean batch requires the admin token. Private configuration copied from `33226dc` unread with the `TEAM_INVITE_CODE` line deleted. Immediate rollback: `33226dc`. Backup: `/opt/countersign/shared/data/backups/pre-accounts-f7825b3.db`. HTTPS before/after: config, 21 ledger records, registry, stats and health unchanged; `/api/me` 401; team reads 401; closed bounty 503; no invite field in the served bundle.
 
 Previous release: **countersign-api:33226dc** (first account release, invite-only). Accounts (`/api/register`, `/api/login`, `/api/logout`, `/api/me`; scrypt hashes, hashed durable sessions, rate limits) and the sign-in/create-account pages; tables `useraccount` and `usersession` are created at startup. Its rollback: `ddaffbd`. Backup: `/opt/countersign/shared/data/backups/pre-accounts-33226dc.db`. HTTPS before/after: config, 21 ledger records, registry, stats and health unchanged; `/api/me` 401 without a session; team reads 401; closed bounty 503. AI/payment/bounty/batch admission remains disabled. Use `IMAGE_TAG=33226dc` in that release directory with `COUNTERSIGN_DATA_DIR=/opt/countersign/shared/data`.
 
