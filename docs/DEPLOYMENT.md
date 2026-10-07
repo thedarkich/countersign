@@ -56,10 +56,11 @@ Offline evaluation runs from the writable local checkout with explicit budget au
 ## Verified deployment — 7 October 2026
 
 - HTTPS preview: https://139-180-194-19.sslip.io/#/ledger (testnet, read-only).
-- Image: `countersign-api:a962754`; server release directory `/opt/countersign/releases/a962754`. Previous `ffa05c4` and `c2c5de5` images/releases retained for rollback.
+- Image: `countersign-api:c22ede6`; server release directory `/opt/countersign/releases/c22ede6`. Previous `a962754`, `ffa05c4` and `c2c5de5` images/releases retained for rollback.
 - Persistent data: `/opt/countersign/shared/data`, UID/GID 10001. Generated admin/privacy settings are in that release's private `deploy/runtime.env`; preserve/reuse the configuration on the next release without printing it. No agent/provider/owner/deployer key was installed for this preview.
 - Previous security rollout backup: `/opt/countersign/shared/data/backups/pre-security-ffa05c4.db`, integrity checked before replacement. The new image passed parser and persistent-budget smoke tests with networking disabled. External HTTPS verifies unchanged receipts and closed admission; one incomplete upload returned 408 after 15.2 seconds while health reads remained available.
 - Latest admission-hardening backup: `/opt/countersign/shared/data/backups/pre-admission-a962754.db`, integrity checked before replacement. The new image passed stored-input revalidation/path-confinement/private-permissions smoke with networking disabled, then public HTTPS preserved all 21 displayed receipts and closed admission.
+- Latest diagnostics backup: `/opt/countersign/shared/data/backups/pre-diagnostics-c22ede6.db`, integrity checked before replacement. The image passed a network-disabled diagnostic/fail-closed/call-accounting smoke; HTTPS verified all 21 retained ledger records, three vendors, two reputation identities, 401 for unauthorized team reads and 503 for closed public submissions. No paid credentials were installed; the existing frontend layers were reused.
 - Live containers: `countersign-api-1` (healthy, internal port only) and `countersign-caddy-1` (80/443). Previous connectivity containers remain stopped for rollback. The loopback QA container is stopped.
 - TLS/HTML/config/registry/ledger/reputation checks passed. AI, transactions, bounty and batches are disabled. The non-green readiness response is expected for this closed preview.
 - Verified backup: `/opt/countersign/shared/data/backups/preview-c2c5de5.db`; a controlled API restart retained all 21 displayed ledger events, including the real AI testnet receipt. A restart with no in-flight jobs is not a live crash-during-broadcast rehearsal; that case has isolated Anvil coverage.
@@ -67,8 +68,8 @@ Offline evaluation runs from the writable local checkout with explicit budget au
 Use this environment prefix with operational commands on this release:
 
 ```bash
-cd /opt/countersign/releases/a962754
-export IMAGE_TAG=a962754
+cd /opt/countersign/releases/c22ede6
+export IMAGE_TAG=c22ede6
 export COUNTERSIGN_DATA_DIR=/opt/countersign/shared/data
 docker compose -f deploy/docker-compose.yml ps
 ```
