@@ -10,6 +10,7 @@ import { Header } from '../components/Header'
 import { Seal, SealMark } from '../components/Seal'
 import { StepRow } from '../components/StepRow'
 import { InvoicePreview } from '../components/InvoicePreview'
+import { Decision } from '../components/Decision'
 import { AdminGate, Address, TxLink } from '../components/bits'
 import { attemptMark, isDone, outcomeLabel, outcomeReason, secs, stepMs } from '../lib/attempt'
 import { clock, fmtAmount } from '../lib/format'
@@ -115,6 +116,7 @@ function Inbox() {
           { label: tr('Processing', '处理中'), value: attempts.filter(a => !isDone(a)).length, icon: 'activity' as const },
         ].map(x => <div className="metric-card" key={x.label}><dt>{x.label}<Icon name={x.icon} size={17} /></dt><dd>{list.isLoading ? '—' : x.value}</dd></div>)}
       </dl>
+      <Roles />
       <DemoShelf target={target} onSent={onSent} />
 
       {/* the clean batch spends the shared AI budget, so only the team token runs it */}
@@ -130,7 +132,7 @@ function Inbox() {
         />}
       </div>
 
-      {pair && <Compare pair={pair} attempts={attempts} onOpen={setSelected} onClose={() => setPair(null)} />}
+      {pair && <Compare pair={pair} attempts={attempts} symbol={symbol} onOpen={setSelected} onClose={() => setPair(null)} />}
 
       <div className="mt-8 flex flex-wrap items-center justify-between gap-2">
         <div className="tab-scroll flex gap-1" role="tablist" aria-label={tr('Source', '来源')}>
@@ -177,6 +179,31 @@ function AgentSwitch({ value, onChange }: { value: Target; onChange: (a: Target)
         ))}
       </div>
     </div>
+  )
+}
+
+// one column on phones, 2×2 on tablets, one row on wide screens
+const ROLE_BORDERS = ['', 'border-t sm:border-l sm:border-t-0', 'border-t xl:border-l xl:border-t-0', 'border-t sm:border-l xl:border-t-0']
+
+/** The split of responsibility, stated once above the demo: the agent proposes, the contract decides. */
+function Roles() {
+  const { tr } = useLang()
+  const steps = [
+    [tr('Invoice arrives', '发票进来'), tr('A PDF, an image or typed text.', 'PDF、图片或一段文字。')],
+    [tr('AI agent proposes', 'AI Agent 提议'), tr('Reads the invoice, flags tricks, and asks the vault to pay. It holds no funds.', '读发票、标出可疑内容，再向金库请求付款。它手里没有钱。')],
+    [tr('Vault contract decides', '金库合约拍板'), tr('Checks the vendor registry, payout address, PO budget, duplicates and the daily cap.', '核对供应商登记、收款地址、采购单预算、重复发票和每日限额。')],
+    [tr('Paid or blocked on chain', '链上付款或拒付'), tr('Either way, the transaction on BOT Chain is the receipt.', '无论结果如何，BOT Chain 上的交易就是回执。')],
+  ]
+  return (
+    <ol className="mt-5 grid overflow-hidden ruled bg-field sm:grid-cols-2 xl:grid-cols-4" aria-label={tr('How a payment is decided', '付款如何决定')}>
+      {steps.map(([title, text], i) => (
+        <li key={title} className={`border-rule p-3 ${ROLE_BORDERS[i]}`}>
+          <p className="text-xs font-semibold text-rule2">0{i + 1}</p>
+          <p className="font-semibold">{title}</p>
+          <p className="mt-0.5 text-[0.85rem] leading-snug text-ink2">{text}</p>
+        </li>
+      ))}
+    </ol>
   )
 }
 
@@ -295,7 +322,7 @@ function DropZone({ target, onSent }: { target: Target; onSent: OnSent }) {
 }
 
 /** The same invoice through both agents, next to each other. This is the stage moment. */
-function Compare({ pair, attempts, onOpen, onClose }: { pair: Pair; attempts: Attempt[]; onOpen: (id: string) => void; onClose: () => void }) {
+function Compare({ pair, attempts, symbol, onOpen, onClose }: { pair: Pair; attempts: Attempt[]; symbol: string; onOpen: (id: string) => void; onClose: () => void }) {
   const { tr } = useLang()
   const g = attempts.find((a) => a.id === pair.guarded)
   const n = attempts.find((a) => a.id === pair.naive)
@@ -308,16 +335,16 @@ function Compare({ pair, attempts, onOpen, onClose }: { pair: Pair; attempts: At
         </button>
       </div>
       <div className="grid md:grid-cols-2">
-        <CompareSide agent="guarded" attempt={g} onOpen={onOpen} />
+        <CompareSide agent="guarded" attempt={g} symbol={symbol} onOpen={onOpen} />
         <div className="border-t border-rule md:border-l md:border-t-0">
-          <CompareSide agent="naive" attempt={n} onOpen={onOpen} />
+          <CompareSide agent="naive" attempt={n} symbol={symbol} onOpen={onOpen} />
         </div>
       </div>
     </section>
   )
 }
 
-function CompareSide({ agent, attempt: a, onOpen }: { agent: AgentKind; attempt?: Attempt; onOpen: (id: string) => void }) {
+function CompareSide({ agent, attempt: a, symbol, onOpen }: { agent: AgentKind; attempt?: Attempt; symbol: string; onOpen: (id: string) => void }) {
   const { t, tr, lang } = useLang()
   const done = !!a && isDone(a)
   const kind = done ? attemptMark(a!) : null
@@ -354,6 +381,7 @@ function CompareSide({ agent, attempt: a, onOpen }: { agent: AgentKind; attempt?
           </div>
         </div>
       )}
+      {a && <div className="mt-4"><Decision attempt={a} symbol={symbol} /></div>}
     </div>
   )
 }
@@ -541,6 +569,8 @@ function Drawer({ attempt, symbol, onClose }: { attempt: Attempt; symbol: string
               )}
             </div>
           )}
+
+          <Decision attempt={a} symbol={symbol} />
 
           <Section
             title={tr('The file', '原件')}
