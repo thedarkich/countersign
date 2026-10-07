@@ -1,5 +1,6 @@
 import type {
   Health,
+  WalletSecurityView,
   ReputationView,
   AgentKind,
   AppConfig,
@@ -52,6 +53,7 @@ export interface MockOwner {
 
 export interface Api {
   mode: 'live' | 'mock'
+  walletSecurity(address?: string): Promise<WalletSecurityView>
   health(): Promise<Health>
   reputation(): Promise<ReputationView>
   config(): Promise<AppConfig>
@@ -130,6 +132,7 @@ function form(input: SubmitInput): FormData {
 
 const liveApi: Api = {
   mode: 'live',
+  walletSecurity: (address) => request('/api/security/wallets' + (address ? '?address=' + encodeURIComponent(address) : '')),
   health: () => request('/api/health'),
   reputation: () => request('/api/reputation'),
   config: () => request('/api/config'),

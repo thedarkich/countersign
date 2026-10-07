@@ -82,7 +82,7 @@ class RehearsalModels:
 def http_vault(live, tmp_path):  # noqa: F811
     chain = live[2]
     settings = Settings(
-        _env_file=None,
+        _env_file=None, scam_screening_enabled=False,
         data_dir=tmp_path,
         static_dir=tmp_path / "absent-static",
         network="testnet",

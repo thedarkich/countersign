@@ -24,3 +24,6 @@ data/eval
 deploy/runtime.env
 deploy/backups
 data/rehearsals
+
+# External, GPL-licensed runtime threat intelligence is fetched separately.
+data/threat-intel

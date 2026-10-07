@@ -1,5 +1,7 @@
 # Backend launch status — 7 October 2026
 
+Latest addition: [Scam Sniffer wallet screening](WALLET_SCREENING.md) is implemented and tested in both agent paths, with public lookup/provenance, fail-closed stale-data behavior and proposal-based reputation attribution. [Full handbook comparison and funding form details](CRITERIA_REVIEW.md) confirms mainnet acceptance remains unmet. The free source is delayed seven days and is not proof of invoice authenticity or comprehensive safety.
+
 The backend can process an invoice end to end on BOT testnet. A real Qwen Flash rehearsal paid 0.05 tUSDT to a registered vendor and returned a verified receipt. The [read-only HTTPS testnet preview](https://139-180-194-19.sslip.io/#/ledger) is deployed and verified; full public bounty/mainnet launch gates remain below. The frontend team owns all UI/UX work.
 
 ## What is implemented
@@ -18,7 +20,7 @@ The backend can process an invoice end to end on BOT testnet. A real Qwen Flash 
 
 ## Verified evidence
 
-- **174 unit/API tests** and **31 isolated Anvil integration tests** pass. Ruff passes. Nine new HTTP-to-vault cases cover hidden PDF instructions, changed-amount/concurrent duplicates, owner changes during AI processing, fake invoices paying real vendors, private evidence and provider failure recovery. These use actual disposable vaults and mocked models; they prove enforcement, not real-model accuracy.
+- **203 unit/API tests** and **31 isolated Anvil integration tests** pass. Ruff passes. Nine new HTTP-to-vault cases cover hidden PDF instructions, changed-amount/concurrent duplicates, owner changes during AI processing, fake invoices paying real vendors, private evidence and provider failure recovery. These use actual disposable vaults and mocked models; they prove enforcement, not real-model accuracy.
 - Live **clean Chinese invoice**: two Qwen Flash calls, no retries, 0.05 tUSDT paid. [Confirmed receipt](https://scan.bohr.life/tx/0x69ab3f76a936ba4543fdd0f7f9dec6825580500b1f6ba4d66b1917ee8372f357). This proves one clean flow; it does not prove attack catch rates or average latency.
 - After RPC batching, one paired read-only testnet measurement reduced the invoice registry snapshot from **19.343 to 5.164 seconds** and the full public state read from **44.786 to 8.692 seconds**. Business values matched exactly (block number/time naturally advanced). This is one comparison on the current three-vendor vault, not an average, SLA or new end-to-end pipeline measurement. No paid model calls or public-chain writes were made for this optimization.
 - The earlier full pipeline latency was **47,503 ms**. Recorded stages: extraction 11.93 s, matching 2.05 s, guard 8.90 s, chain 4.77 s; initial registry reads account for most remaining time. The RPC component has since improved in the paired check above; real model-output reliability and full pipeline latency remain open.

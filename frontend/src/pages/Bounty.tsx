@@ -132,7 +132,7 @@ function Leaderboard({ entries }: { entries?: import('../api/types').Leaderboard
 function SubmitForm({ serial, onSubmitted }: { serial: string; onSubmitted: (id: string) => void }) {
   const { t, lang, tr } = useLang()
   const health = useQuery({ queryKey: ['health'], queryFn: api.health, refetchInterval: 15_000 })
-  const closed = !health.data || health.data.degraded_reasons.some(r => ['AI_DISABLED', 'TRANSACTIONS_DISABLED', 'BOUNTY_NOT_OPEN'].includes(r))
+  const closed = !health.data || health.data.degraded_reasons.some(r => ['AI_DISABLED', 'TRANSACTIONS_DISABLED', 'BOUNTY_NOT_OPEN', 'WALLET_SCREENING_UNAVAILABLE'].includes(r))
   const [nickname, setNickname] = useState(() => {
     try {
       return localStorage.getItem('cs_nick') ?? ''

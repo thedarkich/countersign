@@ -30,6 +30,7 @@ def main():
     commands.add_parser("serve")
     commands.add_parser("liveness")
     commands.add_parser("check")
+    commands.add_parser("refresh-threat-intel")
     backup_parser = commands.add_parser("backup")
     backup_parser.add_argument("destination", type=Path)
     args = parser.parse_args()
@@ -43,7 +44,19 @@ def main():
     from app.config import Settings
 
     settings = Settings()
-    if args.command == "backup":
+    if args.command == "refresh-threat-intel":
+        import asyncio
+
+        from app.threat_intel import WalletScreening
+
+        feed = WalletScreening(
+            settings.data_dir,
+            enabled=settings.scam_screening_enabled,
+            max_age=settings.scam_snapshot_max_age_seconds,
+        )
+        asyncio.run(feed.refresh())
+        print(feed.view().model_dump_json(indent=2))
+    elif args.command == "backup":
         backup(settings.data_dir / "countersign.db", args.destination)
         print("Database backup verified. Protect it as private invoice data.")
     elif args.command == "check":
@@ -61,6 +74,7 @@ def main():
                     "transactions_enabled": settings.transactions_enabled,
                     "bounty_enabled": settings.bounty_enabled,
                     "batch_enabled": settings.batch_enabled,
+                    "scam_screening_enabled": settings.scam_screening_enabled,
                     "static_build_present": (settings.static_dir / "index.html").is_file(),
                 },
                 indent=2,

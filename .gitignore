@@ -33,3 +33,6 @@ data/invoices/
 data/eval/
 data/rehearsals/
 backend/app/prompts/guard_v2.md
+
+# Downloaded GPL-3.0 Scam Sniffer source data and license; runtime cache.
+data/threat-intel/

@@ -175,3 +175,7 @@ Submitted attacks form a dataset. On the last morning, guard v2 learns only from
 6. Agent gas through BOT Chain's paymaster, if BOT Chain confirmed it (3-hour time-box)
 7. Learning loop
 8. Public Good lane
+
+## Approved wallet intelligence addition — 7 October 2026
+
+Scam Sniffer adds a backend check to both agent paths and a public payout-address lookup in Ledger. It can refuse addresses present in its delayed public dataset before broadcasting a payment. Its seven-day delay, lack of chain-specific incident attribution and incomplete coverage are visible; absence is not safety. This is separate from our agent proposal history and immutable vault enforcement. Direct calls with a stolen agent key bypass backend screening, so our on-chain budget/recipient controls remain essential. See [screening scope](WALLET_SCREENING.md) and [current judging/launch gaps](CRITERIA_REVIEW.md).

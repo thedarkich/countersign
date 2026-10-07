@@ -37,6 +37,7 @@ from app.api.views import CHANGE_LABELS, attempt_view, ledger_view, stat_block
 from app.chain.errors import ChainSendError
 from app.config import Settings
 from app.models import Attempt, BatchRecord, ChainEvent
+from app.threat_intel import WalletSecurityView
 
 
 def create_app(settings=None, *, runtime=None):
@@ -119,6 +120,13 @@ def create_app(settings=None, *, runtime=None):
     @app.get("/api/health")
     async def health(request: Request):
         return request.app.state.runtime.health()
+
+    @app.get("/api/security/wallets", response_model=WalletSecurityView)
+    async def wallet_security(
+        request: Request,
+        address: str | None = Query(None, pattern=r"^0x[0-9a-fA-F]{40}$", max_length=42),
+    ):
+        return request.app.state.runtime.screening.view([address] if address else [])
 
     @app.get("/api/config", response_model=AppConfig)
     async def config(request: Request):

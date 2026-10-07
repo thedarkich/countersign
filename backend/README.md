@@ -84,3 +84,7 @@ Uploads remain untrusted: 5 MB, 20 PDF pages, 200,000 text-layer characters, 20 
 Security hardening (7 October): file parsing runs in disposable Linux processes with CPU/memory/wall/output limits; uploads have a 15-second body deadline and eight concurrent modifying-request slots. AI rolling-hour reservations persist in SQLite across restarts, including failed calls. These are resource and call-count controls, not a full native-parser sandbox or dollar budget. See [focused backend security review](../docs/security/BACKEND_REVIEW.md).
 
 Waiting jobs retain only attempt IDs. Workers reload confined, bounded stored inputs and revalidate files when dequeued; retain uploads/fixtures until processing finishes. Batch preparation releases each render and removes its own previews on cancellation/error. Private artifact writes create mode 0600 exclusively and remove partial failed writes. This reduces retained queue memory at the cost of parsing admitted files a second time.
+
+## Scam Sniffer wallet screening
+
+Enabled by default. See [WALLET_SCREENING.md](../docs/WALLET_SCREENING.md) for fail-closed semantics, cache/refresh configuration, source licensing and the public lookup. `python -m app.ops refresh-threat-intel` downloads/validates the free feed without model calls or transactions. Missing/stale data holds processing; it is not a fraud accusation.

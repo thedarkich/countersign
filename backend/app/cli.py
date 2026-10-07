@@ -33,6 +33,8 @@ async def execute(settings, args):
     # A CLI process cannot compete with a running API for its DB/transaction nonces.
     await runtime.start()
     try:
+        if runtime.screening.enabled:
+            await runtime.screening.refresh()
         runtime.check_submission(batch=args.command in {"batch", "seed"})
         source = args.source if args.command == "run" else args.command
         if args.command == "run":

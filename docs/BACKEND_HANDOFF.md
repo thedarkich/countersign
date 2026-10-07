@@ -62,3 +62,7 @@ Proposal only, discussed 7 October: after core launch acceptance, a bounded assi
 ## Model failure diagnostics — 7 October follow-up
 
 Authenticated attempt step details can now contain safe codes for `MODEL_OUTPUT_INCOMPLETE`, `MODEL_OUTPUT_EMPTY`, `MODEL_OUTPUT_INVALID`, `MODEL_TIMEOUT`, `MODEL_AUTH_FAILED`, `MODEL_RATE_LIMITED` or `MODEL_PROVIDER_ERROR`; generic `MODEL_UNAVAILABLE` remains supported. Attempt response fields and terminal `error` behavior are unchanged. These are processing failures, not refusals, policy blocks or proof of fraud. Never turn the display into an automatic paid retry. Public anonymous attempts remain redacted; raw provider errors and rejected output are not returned. Latest backend verification is 151 unit/API plus 28 local-chain tests; real attack repeatability remains pending.
+
+## Wallet-screening API addition — 7 October 2026
+
+`GET /api/security/wallets?address=0x…` is public, read-only and typed as `WalletSecurityView`. Omit the address for feed readiness/provenance. Both live/mock clients are updated. Ledger/Controls preserve bilingual delay, evidence and freshness labels. `WALLET_SCREENING_UNAVAILABLE` closes bounty UI admission; `SCAM_SNIFFER_LISTED` is an off-chain refusal and, only after an attributable proposal, an application-evidence reputation signal. See [full API and operations](WALLET_SCREENING.md).

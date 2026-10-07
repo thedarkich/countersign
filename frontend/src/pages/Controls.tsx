@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { WagmiProvider, useAccount, useConnect, useDisconnect, useSwitchChain, useWriteContract } from 'wagmi'
 import { getAccount, waitForTransactionReceipt } from 'wagmi/actions'
+import { WalletScreeningBadge } from '../components/WalletScreening'
 import { ReputationBadge } from '../components/Reputation'
 import { parseUnits, type Abi, type Address as Addr, type Hex } from 'viem'
 import { api } from '../api/client'
@@ -463,6 +464,7 @@ function Vendors({ reg, owner, busy, run, waitText }: PanelProps) {
                 <td className="px-3 py-2.5">{lang === 'zh' ? v.name_zh : v.name_en}</td>
                 <td className="px-3 py-2.5">
                   <Address value={v.payout} lead={10} tail={8} />
+                  <WalletScreeningBadge address={v.payout} />
                   {editing === v.id && (
                     <form
                       className="mt-2 flex gap-2"

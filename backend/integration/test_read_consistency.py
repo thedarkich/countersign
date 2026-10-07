@@ -25,7 +25,7 @@ def test_batched_reads_keep_original_block_when_owner_changes_policy(live):  # n
             }
         )
     assert old["paused"] is False and old["vendor"][0].lower() == live[5].lower()
-    new = read_state(client, "testnet", Settings(_env_file=None))
+    new = read_state(client, "testnet", Settings(_env_file=None, scam_screening_enabled=False))
     assert new["registry"]["paused"] is True
     assert new["registry"]["vendors"][0]["payout"] == attacker
 
@@ -42,7 +42,7 @@ def test_public_state_still_rejects_changed_canonical_block(live, monkeypatch): 
 
     monkeypatch.setattr(w3.eth, "get_block", changed)
     with pytest.raises(ChainSendError, match="State block changed"):
-        read_state(client, "testnet", Settings(_env_file=None))
+        read_state(client, "testnet", Settings(_env_file=None, scam_screening_enabled=False))
 
 
 def test_snapshot_public_state_and_payment_can_run_concurrently(live):  # noqa: F811
@@ -51,7 +51,7 @@ def test_snapshot_public_state_and_payment_can_run_concurrently(live):  # noqa: 
     async def run():
         return await asyncio.gather(
             live[2].snapshot("testnet"),
-            asyncio.to_thread(read_state, live[2], "testnet", Settings(_env_file=None)),
+            asyncio.to_thread(read_state, live[2], "testnet", Settings(_env_file=None, scam_screening_enabled=False)),
             live[2].send("testnet", "guarded", payment(live), lambda _: None),
         )
 

@@ -21,7 +21,7 @@ from app.pipeline.runner import new_attempt
 
 def runtime_for(directory):
     settings = Settings(
-        _env_file=None,
+        _env_file=None, scam_screening_enabled=False,
         data_dir=directory,
         llm_enabled=True,
         transactions_enabled=True,

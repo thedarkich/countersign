@@ -62,4 +62,6 @@ class Settings(BaseSettings):
     indexer_overlap_blocks: int = Field(default=128, ge=1, le=10000)
     indexer_lag_blocks: int = Field(default=128, ge=1, le=10000)
     indexer_request_budget: int = Field(default=20, ge=1, le=100)
+    scam_screening_enabled: bool = True
+    scam_snapshot_max_age_seconds: int = Field(default=172800, ge=3600, le=259200)
     recovery_batch_size: int = Field(default=20, ge=1, le=100)

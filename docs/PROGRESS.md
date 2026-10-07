@@ -1,5 +1,16 @@
 # Progress
 
+## Scam Sniffer and handbook review — 2026-10-07
+
+Implemented the user-approved wallet database integration in both pipeline paths. Extracted/registry addresses and the final proposal are screened before broadcast; listed addresses produce off-chain refusals, missing/stale snapshots hold payments, and source revision/check evidence stays with the attempt. Public Ledger lookup and Controls payout badges expose provenance and seven-day publication delay. Agent reputation only attributes a listed match when an actual proposal has deterministic application evidence; pre-proposal refusals and model-generated reason codes alone do not accuse an agent. The contract and its reason enum are unchanged. [Behavior, limits and GPL source attribution](WALLET_SCREENING.md).
+
+Validation: **203 unit/API tests + 31 isolated Anvil cases pass (234 total)**, including 29 new screening cases. Ruff, frontend TypeScript, live and mock builds pass. Initial integration execution had 31 fixture setup errors because this shell lacked npm-installed Anvil on PATH; sourcing the existing Node environment resolved it and every integration case passed. No test was skipped. Existing dependency deprecation/Rollup annotation warnings remain. Free upstream download validated revision `d48bea2601a0fb7b4bdbcd833bf3860ae45ab7e6`, 2,530 unique addresses. Local browser verified Chinese/English listed and unlisted results, 390×844 mobile layout without horizontal overflow and the projector stage route against synthetic chain/model adapters. This turn made no paid model calls or blockchain writes.
+
+[Handbook requirement comparison](CRITERIA_REVIEW.md): mainnet acceptance is **not met**. Read-only chain 677 check found owner, deployer and both agents at 0 BOT, with no configured mainnet vault; live site remains chain 968. The human is completing the organizers' gas application using the verified testnet contract, live URL and deployer address. Organizer funding/permission, human mainnet owner setup, funded real-model rehearsal, physical phone/WeChat acceptance and submission evidence remain. The aggregate 20-project deployment target is not an individual scoring quota; the November catch-up does not extend the October 8 noon submission deadline. Preserve actual pre-window work timestamps and source attribution.
+
+Release status: source and local validation complete; production cutover/verification will be recorded after it succeeds.
+
+
 Codex keeps this file current. Newest entries at the top of each section.
 
 ## Status

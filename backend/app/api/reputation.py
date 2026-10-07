@@ -105,7 +105,10 @@ SUMMARIES = {
         "Suspicious proposal observed; review the evidence.",
         "观察到可疑提案，请查看证据。",
     ),
-    "refused": ("The guard refused this input.", "守卫已拒绝该输入。"),
+    "refused": (
+        "Payment processing refused this input before broadcast.",
+        "付款处理已在广播前拒绝该输入。",
+    ),
     "paid": ("Payment executed within vault rules.", "付款已按金库规则执行。"),
     "blocked": ("The vault blocked the proposed payment.", "金库已阻止该付款提案。"),
     "error": (
@@ -168,6 +171,23 @@ def observation(attempt, event, explorer):
         )
         if count.proposals and scenario == "known_attack":
             reasons.append("KNOWN_ATTACK_PROPOSAL")
+        # Only a real proposal matched by our deterministic screening is
+        # attributable to the agent. Model-produced reason codes are insufficient.
+        screening = (attempt.match or {}).get("wallet_screening", {})
+        proposed_addresses = {
+            str((attempt.proposal or {}).get(key, "")).lower()
+            for key in ("pay_to", "registry_payout")
+        }
+        if (
+            count.proposals
+            and screening.get("ready") is True
+            and re.fullmatch(r"[0-9a-f]{40}", str(screening.get("revision", "")))
+            and any(
+                check.get("verdict") == "listed" and check.get("address") in proposed_addresses
+                for check in screening.get("checks", [])
+            )
+        ):
+            reasons.append("SCAM_SNIFFER_LISTED")
         evidence.append("application_record")
         outcome = attempt.outcome or "pending"
         if outcome in {"paid", "blocked"} and not event:
@@ -188,7 +208,9 @@ def observation(attempt, event, explorer):
             reason = event.args.get("reason")
             if isinstance(reason, int) and 0 < reason < len(REASONS):
                 reasons.append(REASONS[reason])
-    suspicious = bool("KNOWN_ATTACK_PROPOSAL" in reasons or "PayoutMismatch" in reasons)
+    suspicious = bool(
+        {"KNOWN_ATTACK_PROPOSAL", "PayoutMismatch", "SCAM_SNIFFER_LISTED"}.intersection(reasons)
+    )
     count.suspicious_proposals = int(suspicious)
     count.confirmed_payments = int(outcome == "paid")
     count.policy_blocks = int(outcome == "blocked")

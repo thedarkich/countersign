@@ -615,6 +615,12 @@ const mockOwner: MockOwner = {
 // ---------- the API ----------
 export const mockApi: Api = {
   mode: 'mock',
+  walletSecurity: async (address) => ({ enabled: false, ready: false, status: 'disabled',
+    source_url: 'https://github.com/scamsniffer/scam-database',
+    license_url: 'https://github.com/scamsniffer/scam-database/blob/main/LICENSE',
+    revision: null, checked_at: null, source_updated_at: null, address_count: 0,
+    publication_delay_days: 7, chain_scope: 'mock_no_live_screening', last_refresh_failed: false,
+    checks: address ? [{address, verdict: 'unavailable'}] : [] }),
   health: async () => ({ ok: true, degraded_reasons: [] }),
   reputation: async () => {
     const events = await mockApi.ledger('all', 100)

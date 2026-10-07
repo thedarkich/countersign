@@ -20,6 +20,7 @@ from app.pipeline.extract import InvoiceModels
 from app.pipeline.ingest import MAX_BYTES, InputError, ingest_text
 from app.pipeline.isolated_ingest import ingest_isolated
 from app.pipeline.runner import PipelineRunner
+from app.threat_intel import WalletScreening
 
 
 class Runtime:
@@ -30,7 +31,12 @@ class Runtime:
         self.store = AttemptStore(settings.data_dir / "countersign.db")
         self.chain = chain or VaultClient.from_settings(settings, engine=self.store.engine)
         self.models = models or InvoiceModels.from_settings(settings, engine=self.store.engine)
-        self.runner = PipelineRunner(self.store, self.models, self.chain)
+        self.screening = WalletScreening(
+            settings.data_dir,
+            enabled=settings.scam_screening_enabled,
+            max_age=settings.scam_snapshot_max_age_seconds,
+        )
+        self.runner = PipelineRunner(self.store, self.models, self.chain, screening=self.screening)
         self.limiter = RateLimiter(self.store.engine, settings)
         # Retain IDs only. A count-bounded queue of decoded PDFs can still consume
         # gigabytes; documents are loaded under worker limits when needed.
@@ -90,6 +96,8 @@ class Runtime:
             session.commit()
         self.tasks = [asyncio.create_task(self.worker()) for _ in range(3)]
         self.tasks.append(asyncio.create_task(self.refresh_loop()))
+        if self.screening.enabled:
+            self.tasks.append(asyncio.create_task(self.screening.refresh_loop()))
         if self.reconciler:
             self.tasks.append(asyncio.create_task(self.recovery_loop()))
         if self.backfiller:
@@ -164,6 +172,12 @@ class Runtime:
         if not self.settings.llm_enabled:
             raise problem(
                 503, "AI processing is disabled for this checkpoint.", "当前版本尚未启用 AI 处理。"
+            )
+        if self.screening.enabled and not self.screening.view().ready:
+            raise problem(
+                503,
+                "Wallet risk data is unavailable or stale; payments are held.",
+                "钱包风险数据不可用或已过期，付款暂缓。",
             )
         gateway = getattr(self.models, "gateway", None)
         if gateway and gateway.exhausted():
@@ -269,6 +283,8 @@ class Runtime:
 
     def health(self):
         reasons = []
+        if self.screening.enabled and not self.screening.view().ready:
+            reasons.append("WALLET_SCREENING_UNAVAILABLE")
         if self.backfiller:
             reasons.extend(self.backfiller.health())
         if not self.settings.llm_enabled:

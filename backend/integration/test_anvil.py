@@ -292,7 +292,7 @@ def test_public_state_cache_and_owner_receipt_use_real_views(live, tmp_path):
     from app.config import Settings
 
     w3, contract, client, store, guarded, vendor, attacker, owner_tx = live
-    settings = Settings(_env_file=None, data_dir=tmp_path)
+    settings = Settings(_env_file=None, scam_screening_enabled=False, data_dir=tmp_path)
     initial = read_state(client, "testnet", settings)
     assert AppConfig.model_validate(initial["config"]).owner_address == w3.eth.accounts[0]
     assert Registry.model_validate(initial["registry"]).vault_balance == "20"
@@ -469,7 +469,7 @@ def test_backfill_verifies_missing_events_and_does_not_advance_on_bad_data(live,
     live[0].provider.make_request("evm_mine", [])
     explorer = Explorer()
     settings = Settings(
-        _env_file=None, indexer_start_block_testnet=receipt["blockNumber"], indexer_lag_blocks=1
+        _env_file=None, scam_screening_enabled=False, indexer_start_block_testnet=receipt["blockNumber"], indexer_lag_blocks=1
     )
     backfill = Backfiller(live[2], fresh, settings, explorers={"testnet": explorer})
     explorer.bad = True

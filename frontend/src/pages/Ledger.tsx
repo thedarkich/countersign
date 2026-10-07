@@ -7,6 +7,7 @@ import type { AgentKind, AppConfig, LedgerEvent, LedgerKind } from '../api/types
 import { useLang } from '../i18n'
 import type { Strings } from '../i18n/strings'
 import { Header } from '../components/Header'
+import { WalletScreeningPanel } from '../components/WalletScreening'
 import { ReputationPanel } from '../components/Reputation'
 import { Icon } from '../components/Icon'
 import { Counters } from '../components/Counters'
@@ -131,7 +132,7 @@ export default function LedgerPage() {
           <p className="mt-3 text-xs text-ink2">{t.c_lost}: {t.money_lost_note}. {stats.data && stats.data.seed.attempts > 0 && t.c_seed_note.replace('{n}', String(stats.data.seed.attempts))}</p>
         </div>
         <div className="mt-7 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
-          <ReputationPanel />
+          <div className="grid gap-5"><ReputationPanel /><WalletScreeningPanel /></div>
           <aside className="grid gap-5 sm:grid-cols-2 xl:grid-cols-1"><QrCard url={qr} /><EvalCard data={evalq.data} /></aside>
         </div>
         <div className="mb-4 mt-9 flex items-center gap-2"><Icon name="activity" size={19} /><h2 className="text-lg font-semibold">{tr('Recent activity', '最近记录')}</h2></div>

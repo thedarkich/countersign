@@ -312,3 +312,19 @@ export interface ReputationView {
 }
 
 export interface Health { ok: boolean; degraded_reasons: string[] }
+
+export interface WalletSecurityView {
+  enabled: boolean
+  ready: boolean
+  status: 'fresh' | 'stale' | 'unavailable' | 'disabled'
+  source_url: string
+  license_url: string
+  revision: string | null
+  checked_at: string | null
+  source_updated_at: string | null
+  address_count: number
+  publication_delay_days: number
+  chain_scope: string
+  last_refresh_failed: boolean
+  checks: { address: string; verdict: 'listed' | 'not_listed' | 'unavailable' }[]
+}

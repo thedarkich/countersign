@@ -785,3 +785,7 @@ npm run abi                  # after forge build: regenerate src/abi/Countersign
 - repo, run instructions, sources of reused components
 - demo video or live link
 - BOT Chain mainnet explorer links, tx records and addresses
+
+## 3.12 Approved addition: Scam Sniffer wallet screening (7 October 2026)
+
+Both agents screen extracted and proposed payout addresses using the free source-pinned external feed, including a pre-signing recheck. Listed matches finish as off-chain `refused` with `SCAM_SNIFFER_LISTED`; the contract Reason enum stays unchanged. Enabled screening with missing/stale data holds admission and produces an operational error if it expires during processing. Public `GET /api/security/wallets` returns metadata and an optional exact address lookup. Ledger/Controls display results, source revision and seven-day publication delay. Mock mode does not claim live coverage. Listed proposals may flag payment-agent reputation based on deterministic application evidence; a pre-proposal refusal or model-generated code alone may not. This narrows the naive comparison to skipping AI review while retaining shared screening and vault rules. See [full semantics and license](WALLET_SCREENING.md).

@@ -90,3 +90,7 @@ src/
 ```
 
 Manrope and Geist Mono are bundled locally; the Manrope license is in `public/fonts/`. Chinese uses the system font stack. No request leaves for a CDN or Google Fonts.
+
+## Wallet risk screening
+
+Ledger exposes `GET /api/security/wallets` through `WalletSecurityView`; Controls shows vendor payout results. Both live and mock clients implement the interface. Mock mode reports screening disabled. Refusals are labelled independently of AI decisions and contract blocks; the seven-day upstream delay and source revision remain visible. See [screening](../docs/WALLET_SCREENING.md).

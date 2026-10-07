@@ -118,3 +118,7 @@ git log --format='%h %aI %s' 87135b1..HEAD
 The redesign takes layout ideas from the user-supplied SpendMate screenshots/video and [ETHGlobal showcase](https://ethglobal.com/showcase/spendmate-wmewx). No SpendMate source code or media assets were copied into the application. Reused dependencies include React, Vite, Tailwind, wagmi/viem, OpenZeppelin and forge-std; versions are recorded in lockfiles and `contracts/dependencies.json`. Bundled third-party development skills retain their own [notices](.agents/skills/THIRD_PARTY.md).
 
 This is a team development checkpoint. Final team credits, the project license, live bounty results, evaluation results, mainnet proof and the submission package remain to be completed; no missing result is presented as finished.
+
+## Wallet screening and current acceptance
+
+Scam Sniffer screening is integrated into both agent paths, with a public lookup in Ledger. The free feed is delayed seven days; a missing or stale feed holds enabled processing. [Behavior, limits and source license](docs/WALLET_SCREENING.md). [Handbook criteria review and mainnet funding steps](docs/CRITERIA_REVIEW.md). The current public preview is testnet and does not satisfy mainnet deployment acceptance.

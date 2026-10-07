@@ -117,7 +117,7 @@ def public_state(network="testnet"):
 @pytest.fixture
 def api_system(tmp_path):
     settings = Settings(
-        _env_file=None,
+        _env_file=None, scam_screening_enabled=False,
         data_dir=tmp_path,
         static_dir=tmp_path / "static",
         admin_token="local-api-test-token",
@@ -430,7 +430,7 @@ def test_disabled_spend_bounty_and_batch_gates(api_system):
 
 
 def test_restart_marks_unfinished_without_rebroadcast(tmp_path):
-    settings = Settings(_env_file=None, data_dir=tmp_path, static_dir=tmp_path / "none")
+    settings = Settings(_env_file=None, scam_screening_enabled=False, data_dir=tmp_path, static_dir=tmp_path / "none")
     chain = ApiChain()
     runtime = Runtime(settings, chain=chain, models=Models(), state_reader=public_state)
     attempt = new_attempt(chain.registry, network="testnet", source="team", agent="guarded")
@@ -460,7 +460,7 @@ def test_state_failure_is_sanitized_and_invalid_host_rejected(api_system):
 def test_fresh_state_does_not_wait_for_background_refresh(tmp_path):
     async def check():
         runtime = Runtime(
-            Settings(_env_file=None, data_dir=tmp_path),
+            Settings(_env_file=None, scam_screening_enabled=False, data_dir=tmp_path),
             chain=ApiChain(),
             models=Models(),
             state_reader=public_state,

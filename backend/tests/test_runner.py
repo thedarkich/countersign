@@ -281,7 +281,7 @@ def test_event_deduplication_keeps_chain_and_vault_in_identity(system):
 
 def test_settings_disable_spend_and_hide_synthetic_secrets(monkeypatch):
     monkeypatch.delenv("LLM_ENABLED", raising=False)
-    settings = Settings(_env_file=None, tokenrouter_api_key="fake-test-secret")
+    settings = Settings(_env_file=None, scam_screening_enabled=False, tokenrouter_api_key="fake-test-secret")
     assert settings.llm_enabled is False
     assert "fake-test-secret" not in repr(settings)
     assert "fake-test-secret" not in settings.model_dump_json()

@@ -16,7 +16,7 @@ from app.schemas import Extraction, GuardVerdict
 
 def test_runtime_lease_prevents_two_nonce_owners(tmp_path):
     async def check():
-        settings = Settings(_env_file=None, data_dir=tmp_path)
+        settings = Settings(_env_file=None, scam_screening_enabled=False, data_dir=tmp_path)
         first = Runtime(settings, chain=Chain(), models=Models(), state_reader=public_state)
         second = Runtime(settings, chain=Chain(), models=Models(), state_reader=public_state)
         await first.start()
