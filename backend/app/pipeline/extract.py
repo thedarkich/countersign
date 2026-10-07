@@ -35,6 +35,7 @@ class InvoiceModels:
             enabled=settings.llm_enabled,
             hourly_cap=settings.llm_hourly_call_cap,
             max_tokens=settings.llm_max_output_tokens,
+            timeout=settings.llm_timeout_seconds,
             budget=ModelCallBudget(engine, settings.llm_hourly_call_cap),
         )
         return cls(

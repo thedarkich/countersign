@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     llm_enabled: bool = False
     llm_hourly_call_cap: int = Field(default=20, ge=1, le=1000)
     llm_max_output_tokens: int = Field(default=1024, ge=1, le=2048)
+    llm_timeout_seconds: float = Field(default=75.0, ge=5, le=180)
     admin_token: SecretStr = Field(default=SecretStr(""), repr=False)
     session_ttl_hours: int = Field(default=168, ge=1, le=720)
     ip_hash_salt: SecretStr = Field(default=SecretStr(""), repr=False)

@@ -117,3 +117,15 @@ def test_hourly_limit_reserves_concurrent_calls_and_rolls():
 
     asyncio.run(run())
     assert len(requests) == 3
+
+
+def test_model_timeout_comes_from_settings(tmp_path):
+    from app.config import Settings
+    from app.db import AttemptStore
+    from app.pipeline.extract import InvoiceModels
+
+    settings = Settings(_env_file=None, llm_timeout_seconds=60)
+    extractor = InvoiceModels.from_settings(settings, engine=AttemptStore(tmp_path / "t.db").engine)
+    assert extractor.gateway.client.timeout == 60
+    assert extractor.gateway.client.max_retries == 0
+    assert Settings(_env_file=None).llm_timeout_seconds == 75

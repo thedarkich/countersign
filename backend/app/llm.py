@@ -71,10 +71,14 @@ class ModelGateway:
         enabled: bool = False,
         hourly_cap: int = 20,
         max_tokens: int = 1024,
+        timeout: float = 30.0,
         budget=None,
     ):
         client = AsyncOpenAI(
-            api_key=api_key, base_url="https://api.tokenrouter.com/v1", timeout=30.0, max_retries=0
+            api_key=api_key,
+            base_url="https://api.tokenrouter.com/v1",
+            timeout=timeout,
+            max_retries=0,
         )
         return cls(
             client, enabled=enabled, hourly_cap=hourly_cap, max_tokens=max_tokens, budget=budget
