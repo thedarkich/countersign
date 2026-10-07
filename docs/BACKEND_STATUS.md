@@ -1,5 +1,7 @@
 # Backend launch status — 7 October 2026
 
+Current production image: **c56dded**. Scam Sniffer screening is live/fresh; listed/unlisted lookups and preserved ledger/history were verified over HTTPS and in the browser. Source has been pushed to the private team repository. Payment processing remains closed; mainnet and other acceptance gaps below still apply.
+
 Latest addition: [Scam Sniffer wallet screening](WALLET_SCREENING.md) is implemented and tested in both agent paths, with public lookup/provenance, fail-closed stale-data behavior and proposal-based reputation attribution. [Full handbook comparison and funding form details](CRITERIA_REVIEW.md) confirms mainnet acceptance remains unmet. The free source is delayed seven days and is not proof of invoice authenticity or comprehensive safety.
 
 The backend can process an invoice end to end on BOT testnet. A real Qwen Flash rehearsal paid 0.05 tUSDT to a registered vendor and returned a verified receipt. The [read-only HTTPS testnet preview](https://139-180-194-19.sslip.io/#/ledger) is deployed and verified; full public bounty/mainnet launch gates remain below. The frontend team owns all UI/UX work.

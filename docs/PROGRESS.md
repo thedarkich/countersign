@@ -8,7 +8,7 @@ Validation: **203 unit/API tests + 31 isolated Anvil cases pass (234 total)**, i
 
 [Handbook requirement comparison](CRITERIA_REVIEW.md): mainnet acceptance is **not met**. Read-only chain 677 check found owner, deployer and both agents at 0 BOT, with no configured mainnet vault; live site remains chain 968. The human is completing the organizers' gas application using the verified testnet contract, live URL and deployer address. Organizer funding/permission, human mainnet owner setup, funded real-model rehearsal, physical phone/WeChat acceptance and submission evidence remain. The aggregate 20-project deployment target is not an individual scoring quota; the November catch-up does not extend the October 8 noon submission deadline. Preserve actual pre-window work timestamps and source attribution.
 
-Release status: source and local validation complete; production cutover/verification will be recorded after it succeeds.
+Deployed as `countersign-api:c56dded` after verified backup `pre-screening-c56dded.db` and isolated non-root image smoke. Live HTTPS checks preserved all 21 ledger rows, both agent identities/counts/statuses, registry and config. Screening is enabled/fresh with 2,530 addresses; source-listed and project-vendor lookups returned listed/not_listed, and malformed input returned 422. Private reads still return 401; bounty submissions remain 503. Live browser lookup displayed the source-listed result with no console errors. AI, transactions, bounty and batches remain disabled. Previous image `e0dcab4` is retained for rollback.
 
 
 Codex keeps this file current. Newest entries at the top of each section.

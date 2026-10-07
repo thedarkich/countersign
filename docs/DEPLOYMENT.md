@@ -1,5 +1,7 @@
 # Backend deployment and recovery
 
+Latest verified release: **countersign-api:c56dded**, `/opt/countersign/releases/c56dded`, deployed 7 October 2026. Immediate rollback: `e0dcab4`. Backup: `/opt/countersign/shared/data/backups/pre-screening-c56dded.db`. Preserved private runtime configuration and all 21 ledger records/two agent histories. Screening fetched its pinned source successfully and both positive/negative public lookups passed. AI/payment/bounty/batch admission remains disabled. For current operations use `IMAGE_TAG=c56dded` in the new release directory with the same persistent data path; older release entries below are historical.
+
 The frontend team owns `frontend/`. Backend changes preserve the existing HTTP response shapes. New internal recovery fields are filtered from public responses. The build packages the integrated teammate frontend; the user-requested adaptation is documented in FRONTEND_INTEGRATION.md.
 
 ## Release preparation
