@@ -1,11 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { WagmiProvider, useAccount, useBalance, useConnect, useDisconnect, useSendTransaction, useSignMessage, useSwitchChain, type Connector } from 'wagmi'
 import { formatEther, isAddress } from 'viem'
 import { api } from '../api/client'
 import { useAuth } from '../lib/auth'
-import { wagmiConfig } from '../lib/wagmi'
+import { isRejection, rpcBalance, useDiscoveredWallets, useInjectedWallet, type DiscoveredWallet, type InjectedWallet } from '../lib/injectedWallet'
 import { walletApi, WalletApiError, type WalletOverview, type WalletPayee, type WalletPayment } from '../lib/walletApi'
 import { useLang } from '../i18n'
 import { Header } from '../components/Header'
@@ -13,7 +12,6 @@ import { Address } from '../components/bits'
 import { clock } from '../lib/format'
 
 type Tr = (en: string, zh: string) => string
-type Provider = { request?: (args: { method: string; params?: unknown[] }) => Promise<unknown> }
 
 export default function WalletPage() {
   const { tr } = useLang()
@@ -22,17 +20,14 @@ export default function WalletPage() {
   if (api.mode === 'mock') body = <p className="mx-auto mt-16 max-w-md px-4 text-center text-ink2">{tr('The wallet works on the live site only. Mock mode sends nothing.', '钱包只在正式站点可用，演示模式不会发送任何东西。')}</p>
   else if (loading && !user) body = <div className="session-state" role="status">{tr('Checking your session…', '正在检查登录状态…')}</div>
   else if (!user) body = <Navigate to="/login?next=%2Fwallet" replace />
-  // reconnectOnMount off: a wallet appears only after this person connects it here
-  else body = <WagmiProvider config={wagmiConfig} reconnectOnMount={false}><Wallet /></WagmiProvider>
+  else body = <Wallet />
   return <div className="workspace"><Header />{body}</div>
 }
-
-const rejected = (e: unknown) => /reject|denied|cancel/i.test(String((e as { shortMessage?: string })?.shortMessage ?? (e as Error)?.message ?? e))
 
 function explain(e: unknown, tr: Tr, lang: 'zh' | 'en') {
   if (e instanceof WalletApiError) return lang === 'zh' ? e.zh : e.en
   const text = String((e as { shortMessage?: string })?.shortMessage ?? (e as Error)?.message ?? e)
-  if (rejected(e)) return tr('You declined in your wallet. Nothing was sent.', '你在钱包里取消了，没有发送任何东西。')
+  if (isRejection(e)) return tr('You declined in your wallet. Nothing was sent.', '你在钱包里取消了，没有发送任何东西。')
   if (/insufficient funds/i.test(text)) return tr('Not enough BOT in this wallet for the amount plus gas.', '钱包里的 BOT 不够支付金额和手续费。')
   return text.slice(0, 200)
 }
@@ -53,6 +48,7 @@ function Wallet() {
   const qc = useQueryClient()
   const overview = useQuery({ queryKey: ['wallet'], queryFn: walletApi.overview, refetchInterval: 15_000, retry: 1 })
   const now = useServerNow(overview.data, overview.dataUpdatedAt)
+  const wallet = useInjectedWallet()
   const refresh = () => qc.invalidateQueries({ queryKey: ['wallet'] })
   const say = (e: unknown) => explain(e, tr, lang)
 
@@ -72,10 +68,10 @@ function Wallet() {
       )}
       {!data ? <div className="mt-6 h-64 animate-pulse rounded-box bg-paper2" aria-hidden /> : (
         <div className="mt-6 grid gap-5 lg:grid-cols-2">
-          <WalletCard data={data} onChange={refresh} say={say} />
+          <WalletCard data={data} wallet={wallet} onChange={refresh} say={say} />
           <LimitCard data={data} now={now} onChange={refresh} say={say} />
           <PayeesCard data={data} now={now} onChange={refresh} say={say} />
-          <SendCard data={data} now={now} say={say} />
+          <SendCard data={data} wallet={wallet} now={now} say={say} />
           <div className="lg:col-span-2"><History explorer={data.explorer_url} /></div>
         </div>
       )}
@@ -97,22 +93,15 @@ function Problem({ text }: { text: string | null }) {
   return text ? <p role="alert" className="mt-2 text-sm font-semibold text-cinnabar">{text}</p> : null
 }
 
-function WalletCard({ data, onChange, say }: { data: WalletOverview; onChange: () => void; say: (e: unknown) => string }) {
+function WalletCard({ data, wallet, onChange, say }: { data: WalletOverview; wallet: InjectedWallet; onChange: () => void; say: (e: unknown) => string }) {
   const { tr } = useLang()
-  const account = useAccount()
-  const { connectors, connectAsync } = useConnect()
-  const { disconnectAsync } = useDisconnect()
-  const { signMessageAsync } = useSignMessage()
-  const { switchChainAsync } = useSwitchChain()
+  const wallets = useDiscoveredWallets()
   const [busy, setBusy] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const linked = data.wallet?.address
-  const balance = useBalance({ address: linked as `0x${string}` | undefined, chainId: data.chain_id, query: { enabled: !!linked, refetchInterval: 15_000 } })
-  const same = !!linked && !!account.address && linked.toLowerCase() === account.address.toLowerCase()
-  // EIP-6963 discovery lists each installed wallet; the generic entry is only a fallback
-  const discovered = connectors.filter(c => c.id !== 'injected')
-  const legacy = typeof window !== 'undefined' && 'ethereum' in window ? connectors.filter(c => c.id === 'injected') : []
-  const wallets = discovered.length ? discovered : legacy
+  const connected = wallet.address
+  const balance = useQuery({ queryKey: ['wallet-balance', data.chain_id, linked], queryFn: () => rpcBalance(data.chain_id, linked!), enabled: !!linked, refetchInterval: 15_000, retry: 1 })
+  const same = !!linked && !!connected && linked.toLowerCase() === connected.toLowerCase()
 
   async function run(name: string, task: () => Promise<unknown>) {
     setErr(null)
@@ -126,45 +115,30 @@ function WalletCard({ data, onChange, say }: { data: WalletOverview; onChange: (
     }
   }
 
-  const connect = (connector: Connector) => run('connect', async () => {
-    if (account.isConnected) await disconnectAsync()
-    try {
-      // ask the wallet which account to share, instead of silently reusing the last one
-      const provider = (await connector.getProvider()) as Provider | undefined
-      await provider?.request?.({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] })
-    } catch (e) {
-      if (rejected(e)) throw e // wallets without this method fall through to the normal prompt
-    }
-    await connectAsync({ connector, chainId: data.chain_id })
-  })
+  const connect = (candidate: DiscoveredWallet) => run('connect', () => wallet.connect(candidate))
 
   const link = () => run('link', async () => {
-    const address = account.address!
+    const address = wallet.address
+    if (!address) throw new Error(tr('Your wallet did not share an account. Connect it again.', '钱包没有提供账户，请重新连接。'))
     const { message } = await walletApi.challenge(address)
-    const signature = await signMessageAsync({ account: address, message })
+    const signature = await wallet.sign(message)
     await walletApi.link(address, signature)
     onChange()
   })
 
   const unlink = () => run('unlink', async () => {
     await walletApi.unlink()
-    try {
-      const provider = (await account.connector?.getProvider()) as Provider | undefined
-      await provider?.request?.({ method: 'wallet_revokePermissions', params: [{ eth_accounts: {} }] })
-    } catch {
-      /* older wallets keep the site permission; disconnecting below is enough */
-    }
-    await disconnectAsync()
+    await wallet.disconnect(true)
     onChange()
   })
 
   const picker = (
     <div className="flex flex-wrap gap-2">
       {wallets.length === 0 && <p className="text-sm text-ink2">{tr('No browser wallet found. Install MetaMask (or another wallet), then reload this page.', '没有找到浏览器钱包。请安装 MetaMask（或其他钱包）后刷新页面。')}</p>}
-      {wallets.map(c => (
-        <button key={c.uid} type="button" className="btn btn-line flex items-center gap-2 py-1.5" disabled={!!busy} onClick={() => void connect(c)}>
-          {c.icon && <img src={c.icon} alt="" className="h-5 w-5" />}
-          {c.id === 'injected' ? tr('Browser wallet', '浏览器钱包') : c.name}
+      {wallets.map(w => (
+        <button key={w.id} type="button" className="btn btn-line flex items-center gap-2 py-1.5" disabled={!!busy} onClick={() => void connect(w)}>
+          {w.icon && <img src={w.icon} alt="" className="h-5 w-5" />}
+          {busy === 'connect' ? tr('Check your wallet…', '请查看钱包…') : w.name || tr('Browser wallet', '浏览器钱包')}
         </button>
       ))}
     </div>
@@ -175,27 +149,27 @@ function WalletCard({ data, onChange, say }: { data: WalletOverview; onChange: (
       {linked ? (
         <div className="space-y-2 text-sm">
           <p>{tr('Linked wallet', '已链接钱包')}: <span className="break-all font-mono text-[0.85rem]">{linked}</span></p>
-          <p>{tr('Balance', '余额')}: <strong className="num">{balance.data ? `${Number(formatEther(balance.data.value)).toLocaleString(undefined, { maximumFractionDigits: 6 })} BOT` : '—'}</strong></p>
-          {!account.isConnected && <><p className="text-ink2">{tr('Connect it to send:', '连接它才能付款：')}</p>{picker}</>}
-          {account.isConnected && !same && (
+          <p>{tr('Balance', '余额')}: <strong className="num">{balance.data !== undefined ? `${Number(formatEther(balance.data)).toLocaleString(undefined, { maximumFractionDigits: 6 })} BOT` : '—'}</strong></p>
+          {!connected && <><p className="text-ink2">{tr('Connect it to send:', '连接它才能付款：')}</p>{picker}</>}
+          {connected && !same && (
             <div className="rounded-box border border-cinnabar p-2.5">
-              <p className="font-semibold text-cinnabar">{tr('Your wallet is on a different account', '钱包当前是另一个账户')}: <span className="font-mono">{account.address}</span></p>
+              <p className="font-semibold text-cinnabar">{tr('Your wallet is on a different account', '钱包当前是另一个账户')}: <span className="break-all font-mono">{connected}</span></p>
               <p className="mt-1 text-ink2">{tr('Switch to the linked account in your wallet, or link this one instead.', '请在钱包里切换到已链接的账户，或改为链接这个账户。')}</p>
               <button type="button" className="btn btn-line mt-2 py-1.5" disabled={!!busy} onClick={() => void link()}>{busy === 'link' ? tr('Sign in your wallet…', '请在钱包里签名…') : tr('Link this account instead', '改为链接这个账户')}</button>
             </div>
           )}
-          {same && account.chainId !== data.chain_id && (
-            <button type="button" className="btn btn-ink py-1.5" disabled={!!busy} onClick={() => void run('switch', () => switchChainAsync({ chainId: data.chain_id }))}>{tr('Switch wallet to BOT Chain', '把钱包切换到 BOT Chain')}</button>
+          {same && wallet.chainId !== data.chain_id && (
+            <button type="button" className="btn btn-ink py-1.5" disabled={!!busy} onClick={() => void run('switch', () => wallet.ensureChain(data.chain_id))}>{tr('Switch wallet to BOT Chain', '把钱包切换到 BOT Chain')}</button>
           )}
-          {same && account.chainId === data.chain_id && <p className="font-semibold text-jade">{tr('Connected and ready to pay.', '已连接，可以付款。')}</p>}
+          {same && wallet.chainId === data.chain_id && <p className="font-semibold text-jade">{tr('Connected and ready to pay.', '已连接，可以付款。')}</p>}
           <button type="button" className="text-sm underline decoration-rule underline-offset-4 hover:decoration-ink" disabled={!!busy} onClick={() => void unlink()}>{tr('Unlink this wallet', '取消链接这个钱包')}</button>
         </div>
-      ) : account.isConnected ? (
+      ) : connected ? (
         <div className="space-y-2 text-sm">
-          <p>{tr('Connected', '已连接')}: <span className="break-all font-mono text-[0.85rem]">{account.address}</span></p>
+          <p>{tr('Connected', '已连接')}: <span className="break-all font-mono text-[0.85rem]">{connected}</span></p>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn btn-ink py-1.5" disabled={!!busy} onClick={() => void link()}>{busy === 'link' ? tr('Sign in your wallet…', '请在钱包里签名…') : tr('Link this wallet to my account', '把这个钱包链接到我的账户')}</button>
-            <button type="button" className="btn btn-line py-1.5" disabled={!!busy} onClick={() => void run('disconnect', () => disconnectAsync())}>{tr('Use another wallet', '换一个钱包')}</button>
+            <button type="button" className="btn btn-line py-1.5" disabled={!!busy} onClick={() => void run('disconnect', () => wallet.disconnect())}>{tr('Use another wallet', '换一个钱包')}</button>
           </div>
           <p className="text-xs text-ink2">{tr('Signing is free and sends no transaction. It proves this wallet is yours.', '签名免费，不会发送交易，只用来证明这个钱包属于你。')}</p>
         </div>
@@ -289,19 +263,16 @@ function PayeesCard({ data, now, onChange, say }: { data: WalletOverview; now: n
 
 type Stage = 'approve' | 'switch' | 'sign' | 'report' | null
 
-function SendCard({ data, now, say }: { data: WalletOverview; now: number; say: (e: unknown) => string }) {
+function SendCard({ data, wallet, now, say }: { data: WalletOverview; wallet: InjectedWallet; now: number; say: (e: unknown) => string }) {
   const { tr } = useLang()
   const qc = useQueryClient()
-  const account = useAccount()
-  const { switchChainAsync } = useSwitchChain()
-  const { sendTransactionAsync } = useSendTransaction()
   const [payeeId, setPayeeId] = useState('')
   const [amount, setAmount] = useState('')
   const [stage, setStage] = useState<Stage>(null)
   const [err, setErr] = useState<string | null>(null)
   const [last, setLast] = useState<WalletPayment | null>(null)
   const linked = data.wallet?.address
-  const ready = !!linked && account.address?.toLowerCase() === linked.toLowerCase()
+  const ready = !!linked && wallet.address?.toLowerCase() === linked.toLowerCase()
   const selected: WalletPayee | undefined = data.payees.find(p => p.id === payeeId)
 
   async function send() {
@@ -310,12 +281,12 @@ function SendCard({ data, now, say }: { data: WalletOverview; now: number; say: 
     setStage('approve')
     try {
       const { payment, tx } = await walletApi.approve(payeeId, amount.trim())
-      if (account.chainId !== tx.chain_id) {
+      if (wallet.chainId !== tx.chain_id) {
         setStage('switch')
-        await switchChainAsync({ chainId: tx.chain_id })
+        await wallet.ensureChain(tx.chain_id)
       }
       setStage('sign')
-      const hash = await sendTransactionAsync({ account: tx.from, to: tx.to, value: BigInt(tx.value), chainId: tx.chain_id })
+      const hash = await wallet.send({ to: tx.to, value: tx.value })
       setStage('report')
       setLast((await walletApi.sent(payment.id, hash)).payment)
       setAmount('')
@@ -324,6 +295,7 @@ function SendCard({ data, now, say }: { data: WalletOverview; now: number; say: 
     } finally {
       setStage(null)
       void qc.invalidateQueries({ queryKey: ['wallet-payments'] })
+      void qc.invalidateQueries({ queryKey: ['wallet-balance'] })
     }
   }
 
