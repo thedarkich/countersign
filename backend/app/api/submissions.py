@@ -5,7 +5,8 @@ from fastapi import Request
 from sqlmodel import Session
 from starlette.datastructures import UploadFile
 
-from app.api.security import device_id, hash_private, problem, session_user
+from app.api.accounts import throttle
+from app.api.security import device_id, has_admin_token, hash_private, problem, session_user
 from app.models import AttemptOwner, SubmissionMeta
 from app.pipeline.ingest import MAX_BYTES, InputError
 from app.pipeline.runner import new_attempt
@@ -52,6 +53,12 @@ async def submit(request: Request, *, source):
                 )
             if bounty:
                 runtime.limiter.reserve(device, nickname)
+            elif not has_admin_token(request) and (account := session_user(request)):
+                # open sign-up: each account gets a bounded share of the AI budget and the vault
+                throttle(
+                    request,
+                    [("account-minute", account["id"], 60, 3), ("account-day", account["id"], 86400, 30)],
+                )
             data, file_name, fixture_kind = None, None, None
             if upload is not None:
                 if not isinstance(upload, UploadFile):

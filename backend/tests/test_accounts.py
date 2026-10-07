@@ -178,3 +178,12 @@ def test_login_attempts_are_rate_limited_per_email(accounts):
     assert all(client.post("/api/login", json=body).status_code == 401 for _ in range(10))
     assert client.post("/api/login", json=body).status_code == 429
     assert client.post("/api/login", json={**body, "password": MEMBER["password"]}).status_code == 429
+
+
+def test_account_submissions_are_rate_limited_but_the_team_token_is_not(accounts):
+    client, _ = accounts
+    register(client)
+    codes = [client.post("/api/team/attempts", data=INVOICE, headers=ORIGIN).status_code for _ in range(4)]
+    assert codes == [202, 202, 202, 429]
+    client.cookies.clear()
+    assert all(client.post("/api/team/attempts", data=INVOICE, headers=ADMIN).status_code == 202 for _ in range(4))
