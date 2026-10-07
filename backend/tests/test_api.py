@@ -27,7 +27,7 @@ class ApiChain(Chain):
         super().__init__()
         self.engine = None
 
-    async def send(self, network, agent, proposal, on_broadcast):
+    async def send(self, network, agent, proposal, on_broadcast, *, on_prepared=None):
         self.sent.append(proposal)
         tx = "0x" + f"{len(self.sent):064x}"
         on_broadcast(tx)

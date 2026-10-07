@@ -38,6 +38,8 @@ class ChainAdapter(Protocol):
         agent: str,
         proposal: PaymentProposal,
         on_broadcast: Callable[[str], None],
+        *,
+        on_prepared: Callable[[str], None] | None = None,
     ) -> dict: ...
 
 
@@ -222,6 +224,7 @@ class PipelineRunner:
             "po_id": proposal.po_id,
             "po_ref": po.ref if po else None,
             "amount": human_amount(proposal.amount_base, registry.decimals),
+            "amount_base": str(proposal.amount_base),
             "invoice_hash": proposal.invoice_hash,
         }
         attempt.status = "sending"
@@ -232,7 +235,13 @@ class PipelineRunner:
             attempt.ai_fooled = attempt.source in {"bounty", "seed"}
             self.store.save(attempt)
 
-        tx = await self.chain.send(attempt.network, attempt.agent, proposal, broadcast)
+        def prepared(tx_hash: str):
+            attempt.tx_hash = tx_hash
+            self.store.save(attempt)
+
+        tx = await self.chain.send(
+            attempt.network, attempt.agent, proposal, broadcast, on_prepared=prepared
+        )
         if (
             not attempt.tx_hash
             or tx.get("hash") != attempt.tx_hash

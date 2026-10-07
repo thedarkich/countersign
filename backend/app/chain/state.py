@@ -179,5 +179,5 @@ def report_receipt(vault, network, tx_hash, engine):
     events = decode_receipt(
         client.w3, client.contract, receipt, chain_id=client.chain_id, network=network
     )
-    save_events(engine, events)
+    save_events(engine, events, receipt=receipt)
     return events

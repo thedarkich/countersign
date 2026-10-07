@@ -108,7 +108,8 @@ class VaultClient:
     def _snapshot(self, network: str) -> RegistrySnapshot:
         client = self._client(network)
         w3, contract = client.w3, client.contract
-        block = w3.eth.block_number
+        pinned = w3.eth.get_block("latest")
+        block = pinned["number"]
         if not w3.eth.get_code(contract.address, block_identifier=block):
             raise ChainSendError("Configured vault has no bytecode")
 
@@ -145,6 +146,8 @@ class VaultClient:
             symbol = token.functions.symbol().call(block_identifier=block, ccip_read_enabled=False)
         if not 0 <= decimals <= 77 or not symbol:
             raise ChainSendError("Unsupported vault asset metadata")
+        if w3.eth.get_block(block)["hash"] != pinned["hash"]:
+            raise ChainSendError("Registry block changed while reading")
         return RegistrySnapshot(
             client.chain_id, contract.address, dict(self.addresses), vendors, pos, decimals, symbol
         )
@@ -159,8 +162,19 @@ class VaultClient:
 
         return await asyncio.to_thread(read)
 
-    async def send(self, network, agent, proposal, on_broadcast):
+    async def send(self, network, agent, proposal, on_broadcast, *, on_prepared=None):
         writer = self.writers.get((network, agent))
         if writer is None:
             raise ChainSendError("Agent or network is not configured")
-        return await asyncio.to_thread(writer.send, proposal, on_broadcast)
+        # Finish an in-flight broadcast before releasing the process lease on shutdown.
+        pending = asyncio.create_task(
+            asyncio.to_thread(writer.send, proposal, on_broadcast, on_prepared=on_prepared)
+        )
+        try:
+            return await asyncio.shield(pending)
+        except asyncio.CancelledError:
+            try:
+                await pending
+            except Exception:
+                pass
+            raise

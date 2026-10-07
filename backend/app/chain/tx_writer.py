@@ -32,13 +32,13 @@ class TransactionWriter:
         self._lock = threading.Lock()
         self._next_nonce = None
 
-    def send(self, proposal: PaymentProposal, on_broadcast) -> dict:
+    def send(self, proposal: PaymentProposal, on_broadcast, *, on_prepared=None) -> dict:
         if not self.enabled:
             raise ChainSendError("Transactions are disabled")
         with self._lock:
-            return self._send(proposal, on_broadcast)
+            return self._send(proposal, on_broadcast, on_prepared)
 
-    def _send(self, proposal: PaymentProposal, on_broadcast) -> dict:
+    def _send(self, proposal: PaymentProposal, on_broadcast, on_prepared=None) -> dict:
         tx_hash = None
         try:
             account = Account.from_key(self._private_key)
@@ -80,6 +80,9 @@ class TransactionWriter:
                     tx["gas"] = 300000
                 signed = account.sign_transaction(tx)
                 tx_hash = to_hex(signed.hash)
+                # Persist the hash before network I/O: a process can die after RPC accepts it.
+                if on_prepared is not None:
+                    on_prepared(tx_hash)
                 try:
                     returned = self.w3.eth.send_raw_transaction(signed.raw_transaction)
                     if to_hex(returned) != tx_hash:
@@ -128,7 +131,7 @@ class TransactionWriter:
                     raise ChainSendError("Unknown block reason", tx_hash)
                 reason = REASONS[index]
             if self.engine is not None:
-                save_events(self.engine, events)
+                save_events(self.engine, events, receipt=receipt)
             labels = LABELS.get(reason, (None, None))
             return {
                 "hash": tx_hash,

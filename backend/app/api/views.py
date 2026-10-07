@@ -1,4 +1,4 @@
-from app.api.schemas import AttemptView, LedgerEventView, StatBlock
+from app.api.schemas import AttemptView, LedgerEventView, Proposal, StatBlock
 from app.chain.indexer import LABELS, REASONS
 from app.pipeline.agents import human_amount
 
@@ -39,6 +39,12 @@ def attempt_view(attempt, *, private):
                 )
             }
         )
+        if attempt.proposal:
+            fields["proposal"] = {
+                key: value
+                for key, value in attempt.proposal.items()
+                if key in Proposal.model_fields
+            }
         fields["preview_url"] = (
             f"/api/attempts/{attempt.id}/preview.png" if attempt.preview_path else None
         )

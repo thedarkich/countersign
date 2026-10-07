@@ -92,3 +92,36 @@ class StateCache(SQLModel, table=True):
     network: str = Field(primary_key=True)
     updated_at: str = Field(default_factory=now_iso)
     payload: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+
+
+class IndexCursor(SQLModel, table=True):
+    key: str = Field(primary_key=True)
+    network: str
+    contract_address: str
+    start_block: int
+    last_block: int
+    last_hash: str | None = None
+    updated_at: str | None = None
+    error: str | None = None
+
+
+class RecoveryCheck(SQLModel, table=True):
+    attempt_id: str = Field(primary_key=True)
+    checked_at: str = Field(default_factory=now_iso, index=True)
+    result: str
+
+
+class ReceiptAnchor(SQLModel, table=True):
+    key: str = Field(primary_key=True)
+    network: str
+    contract_address: str
+    tx_hash: str
+    block_number: int
+    block_hash: str
+
+
+class EventAudit(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    recorded_at: str = Field(default_factory=now_iso)
+    reason: str
+    payload: dict = Field(sa_column=Column(JSON, nullable=False))

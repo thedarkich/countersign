@@ -1,11 +1,12 @@
 from datetime import UTC, datetime
 
 from eth_utils import to_hex
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.sqlite import insert
 from web3.logs import DISCARD
 
 from app.chain.errors import ChainSendError
-from app.models import ChainEvent
+from app.models import ChainEvent, EventAudit, ReceiptAnchor, now_iso
 
 REASONS = (
     "None",
@@ -50,7 +51,8 @@ def json_value(value):
 
 def decode_receipt(w3, contract, receipt, *, chain_id: int, network: str) -> list[dict]:
     """Only call with receipts fetched from this configured chain's RPC."""
-    if w3.eth.chain_id != chain_id or (receipt.get("to") or "").lower() != contract.address.lower():
+    destination = receipt.get("to") or receipt.get("contractAddress") or ""
+    if w3.eth.chain_id != chain_id or destination.lower() != contract.address.lower():
         raise ChainSendError("Receipt identity mismatch")
     if receipt["status"] != 1:
         raise ChainSendError("Transaction reverted", to_hex(receipt["transactionHash"]))
@@ -87,13 +89,51 @@ def decode_receipt(w3, contract, receipt, *, chain_id: int, network: str) -> lis
     return sorted(events, key=lambda item: item["log_index"])
 
 
-def save_events(engine, events: list[dict]):
+def save_events(engine, events: list[dict], *, receipt=None):
     with engine.begin() as connection:
+        if events and receipt is not None:
+            first = events[0]
+            criteria = (
+                ChainEvent.network == first["network"],
+                ChainEvent.contract_address == first["contract_address"],
+                ChainEvent.tx_hash == first["tx_hash"],
+            )
+            fresh = {event["log_index"]: event for event in events}
+            for old in connection.execute(select(ChainEvent.__table__).where(*criteria)).mappings():
+                new = fresh.get(old["log_index"])
+                if new is None or any(old[key] != value for key, value in new.items()):
+                    connection.execute(
+                        insert(EventAudit).values(
+                            recorded_at=now_iso(), reason="RECEIPT_CORRECTION", payload=dict(old)
+                        )
+                    )
+                if new is None:
+                    connection.execute(delete(ChainEvent).where(ChainEvent.id == old["id"]))
         for event in events:
             connection.execute(
                 insert(ChainEvent)
                 .values(**event)
-                .on_conflict_do_nothing(
-                    index_elements=["network", "contract_address", "tx_hash", "log_index"]
+                .on_conflict_do_update(
+                    index_elements=["network", "contract_address", "tx_hash", "log_index"],
+                    set_={
+                        key: value
+                        for key, value in event.items()
+                        if key not in {"network", "contract_address", "tx_hash", "log_index"}
+                    },
                 )
+            )
+        if events and receipt is not None:
+            first = events[0]
+            values = {
+                "key": f"{first['network']}:{first['contract_address']}:{first['tx_hash']}",
+                "network": first["network"],
+                "contract_address": first["contract_address"],
+                "tx_hash": first["tx_hash"],
+                "block_number": receipt["blockNumber"],
+                "block_hash": to_hex(receipt["blockHash"]),
+            }
+            connection.execute(
+                insert(ReceiptAnchor)
+                .values(**values)
+                .on_conflict_do_update(index_elements=["key"], set_=values)
             )

@@ -48,8 +48,18 @@ class Settings(BaseSettings):
     static_dir: Path = ROOT / "frontend" / "dist"
     bounty_enabled: bool = False
     batch_enabled: bool = False
+    eval_enabled: bool = False
     queue_capacity: int = Field(default=60, ge=3, le=200)
     rate_device_per_min: int = Field(default=3, ge=1)
     rate_device_per_day: int = Field(default=30, ge=1)
     rate_nickname_per_day: int = Field(default=30, ge=1)
     rate_global_per_min: int = Field(default=60, ge=1)
+    indexer_enabled: bool = True
+    indexer_interval_seconds: int = Field(default=20, ge=5, le=300)
+    indexer_start_block_testnet: int | None = Field(default=None, ge=0)
+    indexer_start_block_mainnet: int | None = Field(default=None, ge=0)
+    indexer_block_window: int = Field(default=50000, ge=1, le=100000)
+    indexer_overlap_blocks: int = Field(default=128, ge=1, le=10000)
+    indexer_lag_blocks: int = Field(default=128, ge=1, le=10000)
+    indexer_request_budget: int = Field(default=20, ge=1, le=100)
+    recovery_batch_size: int = Field(default=20, ge=1, le=100)

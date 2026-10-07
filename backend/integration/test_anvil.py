@@ -314,3 +314,204 @@ def test_public_state_cache_and_owner_receipt_use_real_views(live, tmp_path):
     w3.eth.wait_for_transaction_receipt(wrong)
     with pytest.raises(ChainSendError):
         report_receipt(client, "testnet", Web3.to_hex(wrong), store.engine)
+
+
+def recovery_attempt(live, result, proposal):
+    from app.models import Attempt
+
+    attempt = Attempt(
+        network="testnet",
+        chain_id=968,
+        source="bounty",
+        agent="guarded",
+        agent_address=live[4].address.lower(),
+        contract_address=live[1].address.lower(),
+        scenario="known_attack",
+        status="error",
+        outcome="error",
+        tx_hash=result["hash"],
+        error="INTERRUPTED_REVIEW_REQUIRED",
+        proposal={
+            "vendor_id": proposal.vendor_id,
+            "po_id": proposal.po_id,
+            "pay_to": proposal.pay_to,
+            "invoice_hash": proposal.invoice_hash,
+            "amount_base": str(proposal.amount_base),
+            "amount": "1",
+        },
+    )
+    live[3].save(attempt)
+    return attempt
+
+
+def test_restart_recovers_receipt_without_signing_or_resending(live):
+    from app.chain.recovery import Reconciler
+
+    proposal = payment(live, "RECOVER")
+    result = send(live, proposal)
+    attempt = recovery_attempt(live, result, proposal)
+    before = live[0].eth.get_transaction_count(live[4].address)
+    # Recovery is independent of signing credentials and enabled transaction writers.
+    for writer in live[2].writers.values():
+        writer.enabled, writer._private_key = False, ""
+    reconciler = Reconciler(live[2], live[3])
+    assert reconciler.reconcile(attempt.id) == "recovered"
+    assert reconciler.reconcile(attempt.id) == "recovered"
+    saved = live[3].get(attempt.id)
+    assert saved.outcome == "paid" and saved.ai_fooled and saved.error is None
+    assert live[0].eth.get_transaction_count(live[4].address) == before
+    with Session(live[3].engine) as session:
+        assert len(session.exec(select(ChainEvent)).all()) == 1
+
+
+@pytest.mark.parametrize("wrong", ["amount", "agent", "vault", "network"])
+def test_recovery_rejects_wrong_proposal_and_identity(live, wrong):
+    from app.chain.recovery import Reconciler
+
+    proposal = payment(live, "RECOVER-WRONG")
+    attempt = recovery_attempt(live, send(live, proposal), proposal)
+    if wrong == "amount":
+        attempt.proposal["amount_base"] = str(2 * UNIT)
+    elif wrong == "agent":
+        attempt.agent_address = live[6].lower()
+    elif wrong == "vault":
+        attempt.contract_address = live[5].lower()
+    else:
+        attempt.chain_id = 677
+    live[3].save(attempt)
+    assert Reconciler(live[2], live[3]).reconcile(attempt.id) == "receipt_unverified"
+    assert live[3].get(attempt.id).outcome == "error"
+
+
+def test_recovery_preserves_block_and_revert_distinction(live):
+    from app.chain.recovery import Reconciler
+
+    bad = replace(payment(live, "REDIRECT"), pay_to=live[6])
+    attempt = recovery_attempt(live, send(live, bad), bad)
+    reconciler = Reconciler(live[2], live[3])
+    assert reconciler.reconcile(attempt.id) == "recovered"
+    assert live[3].get(attempt.id).block_reason == "PayoutMismatch"
+    live[7](live[1].functions.revokeAgent(live[4].address))
+    proposal = payment(live, "REVERT")
+    with pytest.raises(ChainSendError) as failure:
+        send(live, proposal)
+    reverted = recovery_attempt(live, {"hash": failure.value.tx_hash}, proposal)
+    assert reconciler.reconcile(reverted.id) == "reverted"
+    saved = live[3].get(reverted.id)
+    assert saved.error == "TRANSACTION_REVERTED" and saved.tx is None and saved.outcome == "error"
+
+
+def test_prepared_hash_is_saved_before_rpc_and_failure_prevents_send(live):
+    writer = live[2].writers[("testnet", "guarded")]
+    before = live[0].eth.get_transaction_count(live[4].address)
+    hashes = []
+
+    def persist(tx_hash):
+        hashes.append(tx_hash)
+        raise RuntimeError("simulated storage failure")
+
+    with pytest.raises(ChainSendError):
+        writer.send(
+            payment(live, "NO-SEND"), lambda _: pytest.fail("broadcast"), on_prepared=persist
+        )
+    assert len(hashes) == 1 and live[0].eth.get_transaction_count(live[4].address) == before
+
+
+def test_reorg_removes_orphan_payment_and_never_replays(live):
+    from app.chain.recovery import Reconciler
+    from app.models import EventAudit
+
+    w3 = live[0]
+    snapshot = w3.provider.make_request("evm_snapshot", [])["result"]
+    proposal = payment(live, "ORPHAN")
+    result = send(live, proposal)
+    attempt = recovery_attempt(live, result, proposal)
+    reconciler = Reconciler(live[2], live[3])
+    assert reconciler.reconcile(attempt.id) == "recovered"
+    assert w3.provider.make_request("evm_revert", [snapshot])["result"]
+    w3.provider.make_request("evm_increaseTime", [10])
+    w3.provider.make_request("evm_mine", [])
+    assert reconciler.reconcile(attempt.id) == "pending_or_unavailable"
+    assert live[3].get(attempt.id).error == "REORG_REVIEW_REQUIRED"
+    with Session(live[3].engine) as session:
+        assert session.exec(select(ChainEvent)).all() == []
+        assert len(session.exec(select(EventAudit)).all()) == 1
+    assert w3.eth.get_transaction_count(live[4].address) == 0
+
+
+def test_backfill_verifies_missing_events_and_does_not_advance_on_bad_data(live, tmp_path):
+    from app.chain.backfill import Backfiller
+    from app.config import Settings
+    from app.models import IndexCursor
+
+    proposal = payment(live, "BACKFILL")
+    result = send(live, proposal)
+    receipt = live[0].eth.get_transaction_receipt(result["hash"])
+    events = decode_receipt(live[0], live[1], receipt, chain_id=968, network="testnet")
+    fresh = AttemptStore(tmp_path / "backfill.db")
+
+    class Explorer:
+        bad = False
+
+        def fetch(self, address, low, high):
+            return [
+                {
+                    "address": address,
+                    "transactionHash": result["hash"],
+                    "blockNumber": hex(receipt["blockNumber"]),
+                    "logIndex": hex(999 if self.bad else events[0]["log_index"]),
+                }
+            ]
+
+        def close(self):
+            pass
+
+    live[0].provider.make_request("evm_mine", [])
+    explorer = Explorer()
+    settings = Settings(
+        _env_file=None, indexer_start_block_testnet=receipt["blockNumber"], indexer_lag_blocks=1
+    )
+    backfill = Backfiller(live[2], fresh, settings, explorers={"testnet": explorer})
+    explorer.bad = True
+    assert backfill.sync("testnet") == "incomplete"
+    assert (
+        backfill.cursor("testnet", live[2].networks["testnet"]).last_block
+        == receipt["blockNumber"] - 1
+    )
+    explorer.bad = False
+    assert backfill.sync("testnet") == "synced"
+    assert backfill.sync("testnet") == "synced"
+    with Session(fresh.engine) as session:
+        assert len(session.exec(select(ChainEvent)).all()) == 1
+        assert session.exec(select(IndexCursor)).one().error is None
+    fresh.engine.dispose()
+
+
+def test_creation_receipt_is_bound_to_new_contract_address(live):
+    artifact = json.loads(
+        (
+            Path(__file__).resolve().parents[2] / "contracts/out/Countersign.sol/Countersign.json"
+        ).read_text()
+    )
+    factory = live[0].eth.contract(abi=ABI, bytecode=artifact["bytecode"]["object"])
+    receipt = live[7](factory.constructor(live[0].eth.accounts[0], ZERO, 2, UNIT))
+    created = live[0].eth.contract(address=receipt["contractAddress"], abi=ABI)
+    events = decode_receipt(live[0], created, receipt, chain_id=968, network="testnet")
+    assert events and all(event["contract_address"] == created.address.lower() for event in events)
+    with pytest.raises(ChainSendError):
+        decode_receipt(live[0], live[1], receipt, chain_id=968, network="testnet")
+
+
+def test_registry_snapshot_rejects_changed_block(live, monkeypatch):
+    w3, _, client, *_ = live
+    original = w3.eth.get_block
+
+    def changed(identifier, *args, **kwargs):
+        block = dict(original(identifier, *args, **kwargs))
+        if identifier != "latest":
+            block["hash"] = bytes.fromhex("ff" * 32)
+        return block
+
+    monkeypatch.setattr(w3.eth, "get_block", changed)
+    with pytest.raises(ChainSendError, match="Registry block changed"):
+        asyncio.run(client.snapshot("testnet"))

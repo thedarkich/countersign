@@ -1,5 +1,7 @@
 import asyncio
+import fcntl
 import json
+import os
 import time
 from contextlib import suppress
 
@@ -7,7 +9,9 @@ from sqlmodel import Session, select
 
 from app.api.schemas import AppConfig, DemoInvoice, Registry
 from app.api.security import RateLimiter, problem
+from app.chain.backfill import Backfiller
 from app.chain.client import VaultClient
+from app.chain.recovery import Reconciler
 from app.chain.state import read_state, report_receipt
 from app.db import AttemptStore
 from app.models import Attempt, StateCache, now_iso
@@ -39,9 +43,28 @@ class Runtime:
             lambda network, tx: report_receipt(self.chain, network, tx, self.store.engine)
         )
         self.tasks = []
+        self.process_lease = None
         self.sync_errors = set()
+        self.reconciler = (
+            Reconciler(self.chain, self.store) if isinstance(self.chain, VaultClient) else None
+        )
+        self.backfiller = (
+            Backfiller(self.chain, self.store, settings)
+            if self.reconciler and settings.indexer_enabled
+            else None
+        )
 
     async def start(self):
+        descriptor = os.open(
+            self.settings.data_dir / ".runtime.lock", os.O_CREAT | os.O_RDWR, 0o600
+        )
+        self.process_lease = os.fdopen(descriptor, "w")
+        try:
+            fcntl.flock(self.process_lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            self.process_lease.close()
+            self.process_lease = None
+            raise RuntimeError("Only one backend process may own this data directory") from None
         # No blind replay after a crash: a sending job may already have spent money.
         with Session(self.store.engine) as session:
             unfinished = session.exec(
@@ -63,6 +86,10 @@ class Runtime:
             session.commit()
         self.tasks = [asyncio.create_task(self.worker()) for _ in range(3)]
         self.tasks.append(asyncio.create_task(self.refresh_loop()))
+        if self.reconciler:
+            self.tasks.append(asyncio.create_task(self.recovery_loop()))
+        if self.backfiller:
+            self.tasks.append(asyncio.create_task(self.backfill_loop()))
 
     async def stop(self):
         for task in self.tasks:
@@ -71,7 +98,12 @@ class Runtime:
         gateway = getattr(self.models, "gateway", None)
         if gateway:
             await gateway.client.close()
+        if self.backfiller:
+            self.backfiller.close()
         self.store.engine.dispose()
+        if self.process_lease:
+            self.process_lease.close()
+            self.process_lease = None
 
     async def worker(self):
         while True:
@@ -161,6 +193,19 @@ class Runtime:
                     await self.state(network, force=True)
             await asyncio.sleep(10)
 
+    async def recovery_loop(self):
+        while True:
+            with suppress(Exception):
+                await asyncio.to_thread(self.reconciler.run, self.settings.recovery_batch_size)
+            await asyncio.sleep(self.settings.indexer_interval_seconds)
+
+    async def backfill_loop(self):
+        while True:
+            for network in self.chain.networks:
+                with suppress(Exception):
+                    await asyncio.to_thread(self.backfiller.sync, network)
+            await asyncio.sleep(self.settings.indexer_interval_seconds)
+
     def manifest(self):
         path = self.settings.data_dir / "invoices" / "manifest.json"
         if not path.exists():
@@ -197,6 +242,8 @@ class Runtime:
 
     def health(self):
         reasons = []
+        if self.backfiller:
+            reasons.extend(self.backfiller.health())
         if not self.settings.llm_enabled:
             reasons.append("AI_DISABLED")
         if not self.settings.transactions_enabled:

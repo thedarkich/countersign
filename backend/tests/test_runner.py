@@ -87,7 +87,7 @@ class Chain:
     async def invoice_paid(self, network, invoice_hash):
         return self.paid
 
-    async def send(self, network, agent, proposal, on_broadcast):
+    async def send(self, network, agent, proposal, on_broadcast, *, on_prepared=None):
         self.sent.append(proposal)
         if self.failure == "before":
             raise RuntimeError("PRIVATE RPC BODY")
