@@ -16,6 +16,7 @@ from sqlmodel import Session, select
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from web3.exceptions import TransactionNotFound
 
+from app.api.reputation import ReputationView, build_reputation
 from app.api.runtime import Runtime
 from app.api.schemas import (
     AppConfig,
@@ -219,6 +220,32 @@ def create_app(settings=None, *, runtime=None):
                 .limit(limit)
             ).all()
         return [ledger_view(e, state) for e in events]
+
+    @app.get("/api/reputation", response_model=ReputationView)
+    async def reputation(
+        request: Request,
+        network: Literal["mainnet", "testnet"] | None = None,
+        limit: int = Query(20, ge=1, le=100),
+    ):
+        current = request.app.state.runtime
+        selected = network or current.settings.network
+        stale = False
+        try:
+            state = await current_state(request, selected)
+        except StarletteHTTPException as exc:
+            if exc.status_code != 503 or selected not in current.states:
+                raise
+            state, stale = current.states[selected], True
+        result = build_reputation(
+            current.store.engine,
+            state,
+            limit=limit,
+            indexer_enabled=current.settings.indexer_enabled,
+        )
+        if stale:
+            result.coverage.stale = True
+            result.coverage.gaps.append("CHAIN_STATE_STALE")
+        return result
 
     @app.get("/api/eval", response_model=EvalResults, response_model_exclude_none=True)
     async def evaluation(request: Request):
