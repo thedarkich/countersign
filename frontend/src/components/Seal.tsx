@@ -59,7 +59,7 @@ export function Seal({ kind, size = 168, animate = true, rotate = -8 }: { kind: 
             {CENTER[kind]}
           </text>
           <line x1="52" y1="132" x2="148" y2="132" strokeWidth="1.6" />
-          <text x="100" y="152" textAnchor="middle" fontSize={kind === 'no_invoice' ? 11 : 15} fontWeight="700" letterSpacing="3" stroke="none" style={{ fontFamily: '"Archivo Variable",sans-serif', fontVariationSettings: '"wdth" 75' }}>
+          <text x="100" y="152" textAnchor="middle" fontSize={kind === 'no_invoice' ? 11 : 15} fontWeight="700" letterSpacing="3" stroke="none" style={{ fontFamily: '"Geist Variable",sans-serif' }}>
             {BOTTOM[kind]}
           </text>
         </g>
@@ -104,8 +104,8 @@ export function SealMark({ kind, size = 30 }: { kind: MarkKind; size?: number })
 export function BrandSeal({ size = 34 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden className="shrink-0">
-      <rect x="1.6" y="1.6" width="36.8" height="36.8" rx="3" fill="none" stroke="var(--cinnabar)" strokeWidth="3" />
-      <g fill="var(--cinnabar)" fontSize="15.5" fontWeight="700" textAnchor="middle" style={{ fontFamily: '"PingFang SC","Noto Sans SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif' }}>
+      <rect x="1.6" y="1.6" width="36.8" height="36.8" rx="3" fill="none" stroke="#b53b36" strokeWidth="3" />
+      <g fill="#b53b36" fontSize="15.5" fontWeight="700" textAnchor="middle" style={{ fontFamily: '"PingFang SC","Noto Sans SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif' }}>
         <text x="20" y="18.2">会</text>
         <text x="20" y="34.4">签</text>
       </g>

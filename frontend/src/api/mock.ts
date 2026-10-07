@@ -5,6 +5,8 @@
 */
 import type { Api, MockOwner, SubmitInput } from './client'
 import type {
+  AgentHistory,
+  Counts,
   AgentKind,
   AppConfig,
   Attempt,
@@ -613,6 +615,38 @@ const mockOwner: MockOwner = {
 // ---------- the API ----------
 export const mockApi: Api = {
   mode: 'mock',
+  health: async () => ({ ok: true, degraded_reasons: [] }),
+  reputation: async () => {
+    const events = await mockApi.ledger('all', 100)
+    const agents: AgentHistory[] = (['guarded', 'naive'] as const).map(label => {
+      const rows = events.filter(e => e.agent === label)
+      const suspicious = rows.filter(e => e.name === 'Blocked' && e.reason === 'PayoutMismatch').length
+      const counts: Counts = { observations: rows.length, attempts: 0, refusals: 0,
+        proposals: rows.length, known_attack_attempts: 0, known_attack_refusals: 0,
+        suspicious_proposals: suspicious, confirmed_payments: rows.filter(e => e.name === 'Paid').length,
+        policy_blocks: rows.filter(e => e.name === 'Blocked').length, errors: 0,
+        receipt_only: rows.length, unverified: 0 }
+      return { id: `${config.chain_id}:${config.contract_address}:${config.agents[label]}`,
+        chain_id: config.chain_id, contract_address: config.contract_address, agent_address: config.agents[label],
+        label, active: registry.agents?.find(a => a.label === label)?.active ?? false,
+        role_en: label === 'naive' ? 'Deliberately unguarded demo comparison' : 'Guarded product agent',
+        role_zh: label === 'naive' ? '故意不设防的演示对照' : '带防护的产品 Agent',
+        status: suspicious ? 'suspicious_observed' : rows.length ? 'no_flag_observed' : 'no_history',
+        status_en: suspicious ? 'Suspicious proposal observed — review' : 'No suspicious proposal observed in this history',
+        status_zh: suspicious ? '观察到可疑提议，请审核' : '此历史中未观察到可疑提议',
+        first_observed_at: rows[rows.length - 1]?.block_time ?? null, last_observed_at: rows[0]?.block_time ?? null,
+        counts, breakdown: [{ source: 'unknown', scenario: 'unknown', model_versions: {}, guard_version: null, counts }],
+        recent_observations: rows.slice(0, 5).map(e => ({ id: e.id, time: e.block_time, source: 'unknown',
+          scenario: 'unknown', model_versions: {}, guard_version: null,
+          outcome: e.name === 'Paid' ? 'paid' : 'blocked', reason_codes: e.reason ? [e.reason] : [],
+          evidence: ['verified_transaction'], transaction_url: e.explorer_url,
+          suspicious: e.reason === 'PayoutMismatch', summary_en: 'Illustrative mock event', summary_zh: '模拟示例记录' })) }
+    })
+    return { agents, updated_at: now(), coverage: { network: config.network, chain_id: config.chain_id,
+      contract_address: config.contract_address, observed_from_block: null, observed_to_block: null,
+      scan_from_block: null, scanned_through_block: null, last_sync: now(), stale: false,
+      gaps: ['MOCK_DATA', 'LATEST_100_SIMULATED_EVENTS'], scope: 'configured_vault_observed_history' } }
+  },
   async config() {
     return clone(config)
   },

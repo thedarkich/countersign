@@ -1,6 +1,6 @@
 # Backend handoff to the frontend team
 
-Frontend/UI/UX belongs to the team. This release changes no files under `frontend/`. Existing HTTP response shapes remain compatible with `frontend/src/api/types.ts`. Backend-only proposal fields such as `amount_base` are private and filtered from those responses.
+Frontend/UI/UX belongs to the team. At the user's request, the 7 October integration imports their frontend presentation and adapts it to this backend; see [integration notes](FRONTEND_INTEGRATION.md). Existing HTTP response shapes remain compatible with `frontend/src/api/types.ts`. Backend-only proposal fields such as `amount_base` are private and filtered from those responses.
 
 Read-only deployed preview: [Ledger](https://139-180-194-19.sslip.io/#/ledger), [API config](https://139-180-194-19.sslip.io/api/config), [reputation](https://139-180-194-19.sslip.io/api/reputation). Paid processing is closed; the preview does not consume model credit.
 
@@ -41,7 +41,9 @@ Coverage always includes `OBSERVED_HISTORY_ONLY` and `EXPLORER_DISCOVERY_DEPENDE
 
 Public observations contain fixed bilingual summaries, public addresses, model/version metadata and evidence links. They omit private invoice content, hidden instructions, device/IP identifiers and nicknames. Budget, duplicate, pause and execution errors alone do not receive a suspicious flag. A known fake invoice paid to an approved vendor stays suspicious even when outside-registry outflow is zero.
 
-## Frontend work to finish
+## Frontend integration checklist
+
+Items 1–4 below are implemented by the teammate integration. Browser viewport checks passed; physical phone/WeChat acceptance in item 5 remains.
 
 1. Add reputation types/live client/mock together, using the schema. Display in the existing Ledger and Controls workflows, retaining the naive demo label, evidence source and coverage warnings.
 2. Render `money_lost` as “Funds sent outside registered payouts” (or equivalent), not total fraud losses. Show paid fake invoices to registered vendors separately.

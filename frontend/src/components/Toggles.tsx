@@ -1,3 +1,4 @@
+import { Moon, Sun } from 'lucide-react'
 import { useLang } from '../i18n'
 import { useTheme } from '../lib/theme'
 
@@ -40,18 +41,9 @@ export function ThemeSwitch() {
       onClick={() => setTheme(dark ? 'light' : 'dark')}
       aria-label={label}
       title={label}
-      className="inline-flex h-[1.9rem] w-[1.9rem] shrink-0 items-center justify-center rounded-box text-ink hover:bg-paper2"
+      className="inline-flex h-[1.9rem] w-[1.9rem] shrink-0 items-center justify-center rounded-md text-ink-2 hover:bg-paper2 hover:text-ink"
     >
-      {dark ? (
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
-          <circle cx="12" cy="12" r="4.2" />
-          <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" />
-        </svg>
-      ) : (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden>
-          <path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7Z" />
-        </svg>
-      )}
+      {dark ? <Sun size={17} /> : <Moon size={17} />}
     </button>
   )
 }

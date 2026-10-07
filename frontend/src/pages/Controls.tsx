@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { WagmiProvider, useAccount, useConnect, useDisconnect, useSwitchChain, useWriteContract } from 'wagmi'
-import { waitForTransactionReceipt } from 'wagmi/actions'
+import { getAccount, waitForTransactionReceipt } from 'wagmi/actions'
+import { ReputationBadge } from '../components/Reputation'
 import { parseUnits, type Abi, type Address as Addr, type Hex } from 'viem'
 import { api } from '../api/client'
 import type { AppConfig, ChangeKind, PendingChange, Registry } from '../api/types'
@@ -141,6 +142,9 @@ function LiveControls({ config }: { config: AppConfig }) {
 
   const act: Act = useCallback(
     async (a, onSent) => {
+      const current = getAccount(wagmiConfig)
+      if (!current.isConnected || current.chainId !== config.chain_id) throw new Error(tr('Connect a wallet on the configured network first.', '请先连接当前网络的钱包。'))
+      if (a.type !== 'execute' && current.address?.toLowerCase() !== config.owner_address.toLowerCase()) throw new Error(tr('Only the owner can submit this action.', '只有所有者可以提交此操作。'))
       const call = toCall(a, config.token.decimals)
       // BOT Chain has no EIP-1559, so the wallet must send a legacy (gasPrice) transaction
       const hash = await writeContractAsync({
@@ -391,8 +395,7 @@ function Pending({ reg, symbol, canSend, isOwner, busy, run }: { reg: Registry; 
 
 function PendingRow({ c, reg, symbol, lang, canSend, isOwner, busy, run }: { c: PendingChange; reg: Registry; symbol: string; lang: 'zh' | 'en'; canSend: boolean; isOwner: boolean; busy: string | null; run: Run }) {
   const { tr } = useLang()
-  const [ready, setReady] = useState(() => c.ready || Date.parse(c.eta) <= Date.now())
-  const onDone = useCallback(() => setReady(true), [])
+  const ready = c.ready
   const addr = changeAddress(c.kind, c.decoded)
   const known = addr && reg.vendors.some((v) => v.payout.toLowerCase() === addr.toLowerCase())
   return (
@@ -417,7 +420,7 @@ function PendingRow({ c, reg, symbol, lang, canSend, isOwner, busy, run }: { c: 
           <span className="cond text-xl font-bold text-jade">{tr('Ready', '可执行')}</span>
         ) : (
           <span className="text-sm text-ink2">
-            {tr('ready in', '还剩')} <span className="text-2xl text-ink">{<Countdown to={c.eta} onDone={onDone} />}</span>
+            {tr('ready in', '还剩')} <span className="text-2xl text-ink">{<Countdown to={c.eta} />}</span>
           </span>
         )}
       </div>
@@ -465,7 +468,7 @@ function Vendors({ reg, owner, busy, run, waitText }: PanelProps) {
                       className="mt-2 flex gap-2"
                       onSubmit={(e) => {
                         e.preventDefault()
-                        if (!isAddress(newPayout)) return
+                        if (!owner || busy !== null || !isAddress(newPayout)) return
                         void run(`payout-${v.id}`, { type: 'queue', kind: 'SetPayout', decoded: { vendor_id: v.id, new_payout: newPayout.trim() } }, () => {
                           setEditing(null)
                           setNewPayout('')
@@ -473,7 +476,7 @@ function Vendors({ reg, owner, busy, run, waitText }: PanelProps) {
                       }}
                     >
                       <input className="field py-1.5 font-mono text-[0.85rem]" placeholder="0x…" value={newPayout} onChange={(e) => setNewPayout(e.target.value)} spellCheck={false} aria-label={tr('New payout address', '新收款地址')} />
-                      <button type="submit" className="btn btn-ink whitespace-nowrap py-1.5" disabled={!isAddress(newPayout) || busy !== null}>
+                      <button type="submit" className="btn btn-ink whitespace-nowrap py-1.5" disabled={!owner || !isAddress(newPayout) || busy !== null}>
                         {tr('Queue', '排队')} <Tag kind="wait" text={waitText} />
                       </button>
                     </form>
@@ -658,6 +661,7 @@ function Agents({ reg, owner, busy, run, waitText }: PanelProps) {
           <div className="agent-summary"><span className={`agent-avatar ${g.label}`}><Icon name={g.label === 'guarded' ? 'shield' : 'agents'} /></span><div className="flex-1"><h3 className="text-sm font-semibold">{g.label === 'guarded' ? tr('Guarded agent', '带防护的 Agent') : g.label === 'naive' ? tr('Naive agent', '裸奔 Agent') : String(g.label)}</h3><span className="soft-tag mt-1">{g.active ? tr('Authorized key', '已授权密钥') : tr('Revoked', '已撤销')}</span></div></div>
           <p className="mb-1 mt-5 text-xs text-ink2">{tr('Wallet address', '钱包地址')}</p>
           <Address value={g.address} lead={10} tail={8} className={g.active ? '' : 'line-through'} />
+          <ReputationBadge address={g.address} />
           <div className="mt-4 flex flex-wrap items-end justify-between gap-3 border-t border-rule pt-4"><div><p className="text-xs text-ink2">{tr('Gas balance', '手续费余额')}</p><p className="mt-1 font-mono text-sm">{g.balance != null ? `${fmtAmount(g.balance)} BOT` : '—'}</p><p className="mt-1 text-xs text-ink2">{g.gas === 'sponsored' ? tr('Sponsored gas (configured)', '配置为代付手续费') : g.gas === 'self' ? tr('Pays its own gas', '自付手续费') : tr('Gas mode unavailable', '手续费模式暂无数据')}</p></div>
           {g.active && <button type="button" className="btn btn-cinnabar px-3 py-2 text-xs" disabled={!owner || busy !== null} onClick={() => run(`revoke-${g.address}`, { type: 'revokeAgent', agent: g.address })}>{tr('Revoke', '撤销')} <Tag kind="now" /></button>}</div>
           {g.label === 'naive' && <p className="mt-4 text-xs text-ink2">{tr('Deliberately unguarded for comparison. The vault still enforces its rules.', '故意不设防以作对照，金库仍执行规则。')}</p>}

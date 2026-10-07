@@ -231,3 +231,84 @@ export interface RateLimitError {
   message_en: string
   message_zh: string
 }
+
+// Public reputation schema: docs/REPUTATION.schema.json. No private invoice fields.
+export interface AgentHistory {
+  id: string
+  chain_id: number
+  contract_address: string
+  agent_address: string
+  label: "guarded" | "naive"
+  role_en: string
+  role_zh: string
+  active: boolean
+  status: "no_history" | "no_flag_observed" | "suspicious_observed"
+  status_en: string
+  status_zh: string
+  first_observed_at: string | null
+  last_observed_at: string | null
+  counts: Counts
+  breakdown: Array<Breakdown>
+  recent_observations: Array<Observation>
+}
+
+export interface Breakdown {
+  source: string
+  scenario: string
+  model_versions: Record<string, string>
+  guard_version: string | null
+  counts: Counts
+}
+
+export interface Counts {
+  observations: number
+  attempts: number
+  refusals: number
+  proposals: number
+  known_attack_attempts: number
+  known_attack_refusals: number
+  suspicious_proposals: number
+  confirmed_payments: number
+  policy_blocks: number
+  errors: number
+  receipt_only: number
+  unverified: number
+}
+
+export interface Coverage {
+  network: string
+  chain_id: number
+  contract_address: string
+  observed_from_block: number | null
+  observed_to_block: number | null
+  scan_from_block: number | null
+  scanned_through_block: number | null
+  last_sync: string | null
+  stale: boolean
+  gaps: Array<string>
+  scope: "configured_vault_observed_history"
+}
+
+export interface Observation {
+  id: string
+  time: string
+  source: "bounty" | "seed" | "team" | "batch" | "unknown"
+  scenario: "known_attack" | "clean_fixture" | "unlabeled" | "unknown"
+  model_versions: Record<string, string>
+  guard_version: string | null
+  outcome: "paid" | "blocked" | "refused" | "no_invoice" | "error" | "pending" | "unverified"
+  reason_codes: Array<string>
+  evidence: Array<"application_record" | "verified_transaction">
+  transaction_url: string | null
+  suspicious: boolean
+  summary_en: string
+  summary_zh: string
+}
+
+export interface ReputationView {
+  agents: Array<AgentHistory>
+  updated_at: string
+  coverage: Coverage
+}
+
+export interface Health { ok: boolean; degraded_reasons: string[] }

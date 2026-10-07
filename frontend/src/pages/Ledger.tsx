@@ -7,7 +7,7 @@ import type { AgentKind, AppConfig, LedgerEvent, LedgerKind } from '../api/types
 import { useLang } from '../i18n'
 import type { Strings } from '../i18n/strings'
 import { Header } from '../components/Header'
-import { AgentActivity } from '../components/AgentActivity'
+import { ReputationPanel } from '../components/Reputation'
 import { Icon } from '../components/Icon'
 import { Counters } from '../components/Counters'
 import { BrandSeal, Seal, SealMark } from '../components/Seal'
@@ -77,7 +77,6 @@ export default function LedgerPage() {
 
   const config = useQuery({ queryKey: ['config'], queryFn: api.config, staleTime: 60_000 })
   const stats = useQuery({ queryKey: ['stats'], queryFn: api.stats, refetchInterval: 3000 })
-  const agentFeed = useQuery({ queryKey: ['ledger', 'all'], queryFn: () => api.ledger('all', 100), refetchInterval: 2500 })
   const evalq = useQuery({ queryKey: ['eval'], queryFn: api.evalResults, refetchInterval: 30_000 })
   // stage mode always watches everything; the table follows the filter tabs
   const ledger = useQuery({ queryKey: ['ledger', stage ? 'all' : kind], queryFn: () => api.ledger(stage ? 'all' : kind, 100), refetchInterval: 2500 })
@@ -132,7 +131,7 @@ export default function LedgerPage() {
           <p className="mt-3 text-xs text-ink2">{t.c_lost}: {t.money_lost_note}. {stats.data && stats.data.seed.attempts > 0 && t.c_seed_note.replace('{n}', String(stats.data.seed.attempts))}</p>
         </div>
         <div className="mt-7 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
-          <AgentActivity config={config.data} events={agentFeed.data} />
+          <ReputationPanel />
           <aside className="grid gap-5 sm:grid-cols-2 xl:grid-cols-1"><QrCard url={qr} /><EvalCard data={evalq.data} /></aside>
         </div>
         <div className="mb-4 mt-9 flex items-center gap-2"><Icon name="activity" size={19} /><h2 className="text-lg font-semibold">{tr('Recent activity', '最近记录')}</h2></div>

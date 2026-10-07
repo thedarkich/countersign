@@ -10,10 +10,16 @@ Codex keeps this file current. Newest entries at the top of each section.
 | 1 Contract | testnet deployed, source verified and live proof passed; mainnet pending | 92 local tests pass, including the expanded operations rehearsal. Verified testnet vault, 8 delayed setup changes, 20 tUSDT funding and real Paid/PayoutMismatch/OverBudget/DuplicateInvoice receipts. Vault holds 19.9 tUSDT after the 0.1 proof payment. Mainnet owner/deployer/agents each have 0 BOT; no mainnet deployment or phase-completion tag. |
 | 2 Pipeline | clean real-model/testnet flow passed; attack acceptance pending | 174 unit/API + 31 Anvil tests pass. Clean Qwen proof paid 0.05 tUSDT; a later two-call hidden-PDF check refused on guarded and stopped on naive extraction failure, with no transaction. Stage repeatability and funded batch remain unvalidated. |
 | 3 Bounty live | API implemented; public admission closed | Docker/Compose/Caddy package and isolated VPS smoke passed. HTTPS read-only testnet preview, private backup and restart retention passed. Organizer permission, operating AI budget and final phone/WeChat acceptance remain. |
-| 4 Product | backend ready for frontend integration; funded acceptance pending | Evidence-derived reputation route/schema delivered without frontend edits. Team owns UI/UX. Mainnet owner rehearsal, stage reliability and final app checks remain. |
+| 4 Product | teammate frontend integrated; funded acceptance pending | New landing/navigation connects to existing backend; evidence-derived reputation displayed in Ledger/Controls. Team owns UI/UX. Mainnet owner rehearsal, stage reliability and final app checks remain. |
 | 5 Learning loop | offline tooling implemented and tested; paid run not started | Grouped split, clean holdout, stateful-rule exclusions, counts/Wilson intervals, run-once marker and conditional v2 eligibility implemented. Current plan has 0 train attacks and 1 held-out attack; no results invented or guard switch. |
 | 6 Public Good lane | not started | |
 | 7 Submit | not started | |
+
+## Teammate frontend integration — 2026-10-07
+
+At the user's request, imported presentation from `yihao0220/countersign@898f978`, preserving our backend, contracts/ABI, security and data. Added landing/team access around the four workflows; replaced upstream local-only login and wallet assumptions with our bearer-authenticated API and real owner-wallet controls. Connected evidence-based reputation, corrected the outside-registry outflow label, preserved private previews and showed closed bounty readiness. Types/client/mock updated together. See [scope and provenance](FRONTEND_INTEGRATION.md).
+
+Typecheck, production/mock builds, Ruff and all 205 backend tests pass. Browser tests against synthetic adapters exercised authentication, both-agent invoice comparison, private previews, public submission, reputation and wallet-disabled controls. No paid AI calls or public-chain writes. Mainnet, real attack/batch/evaluation acceptance, public admission permission/budget and final mobile-data/WeChat checks remain open. Deployment outcome is recorded separately after verification.
 
 ## Backend RPC latency and read-integrity follow-up — 2026-10-07
 

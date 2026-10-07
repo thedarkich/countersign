@@ -1,15 +1,15 @@
-> 2026-10-06 redesign: the approved SpendMate references now inform the sidebar, dark/light surfaces, metric cards, agent wallets and activity layout. Four routes, owner actions and API shapes remain. See [design/provenance/checks](../docs/FRONTEND_REDESIGN.md). Ledger agent summaries are a bounded event view; full public reputation remains pending. On 2026-10-07 the local HTTP API was implemented and all four routes were exercised with simulated AI/chain adapters; private invoice previews now send the required authentication headers. Live-model/funded-network acceptance and deployment remain pending.
+> 2026-10-07: integrated the teammate frontend from `yihao0220/countersign` with our existing API, wallet controls and evidence-based reputation. See [provenance and validation](../docs/FRONTEND_INTEGRATION.md).
 
 # Countersign frontend
 
-Four screens, one Vite + React app:
-
-**Approved next addition (not in the current mock):** public payment-agent reputation in Ledger, with the same status beside agent keys in Controls. It reports suspicious proposals and their evidence, distinguishes successful refusals from policy blocks and errors, and separates networks, sources and model/guard versions. It does not rate vendors, declare proven fraud or change payment authority. Implement SPEC §3.11 in Phase 4, updating types/client/mock/backend together; no feature code during Phase 0. Also relabel the existing `money_lost` counter as funds sent outside the registry, not total fraud loss. The human-approved SpendMate-inspired redesign follows current setup and preserves these four workflows.
+A landing page and team-access screen surround the four core workflows in one Vite + React app. Public agent history is connected in Ledger and Controls.
 
 | Route | Who | What |
 |---|---|---|
-| `#/bounty` | public, phones | Submit an invoice or a message to the guarded or naive agent and watch it go through the countersign row (读 隐 核 审 链) until the seal lands. Also shows live counters, the leaderboard and the rules. Phone photos over 1.5 MB are shrunk in the browser (2400 px long edge, JPEG) so they fit the 5 MB limit. |
-| `#/ledger` | public, projector | Counters, the QR code to the bounty, the guard v1 vs v2 card and every on-chain event. Press `F` or open `#/ledger?stage=1` for stage mode. New payments and blocks stamp a big seal for three seconds. |
+| `#/` | public | Bilingual landing page, illustrative payment flow, links to the team workspace and public ledger. |
+| `#/login` | team | Validates the existing team access token; no customer signup or password service. |
+| `#/bounty` | public, phones | Submit an invoice or a message to the guarded or naive agent and watch it go through the countersign row (读 隐 核 审 链) until the seal lands. Submission is disabled while backend readiness reports closed admission. Also shows live counters, the leaderboard and the rules. Phone photos over 1.5 MB are shrunk in the browser (2400 px long edge, JPEG) so they fit the 5 MB limit. |
+| `#/ledger` | public, projector | Evidence-based agent reputation, counters, the QR code to the bounty, the guard v1 vs v2 card and every on-chain event. Press `F` or open `#/ledger?stage=1` for stage mode. New payments and blocks stamp a big seal for three seconds. |
 | `#/inbox` | team (admin token) | One-click stage invoices, drag-and-drop upload, the clean batch, and "Both agents": the same invoice through the guarded and the naive agent, side by side, each ending in its own seal. That view is the demo's key moment. Any attempt opens a drawer with the file, hidden-text boxes, fields, flags and the proposal next to the registry address. |
 | `#/controls` | team plus the owner wallet | Vendors, budgets, daily cap, agent keys (with their BOT balance and whether BOT Chain's paymaster pays their gas), pause, withdraw, and the queue of waiting changes with countdowns. Instant actions and time-locked ones are labelled on every button. |
 
@@ -89,4 +89,4 @@ src/
   pages/        Bounty, Ledger, Inbox, Controls (lazy, carries wagmi and viem)
 ```
 
-Fonts are bundled through Fontsource (Archivo variable for headings and numbers, IBM Plex Mono for addresses and hashes). Chinese uses the system font stack. No request leaves for a CDN or Google Fonts.
+Manrope and Geist Mono are bundled locally; the Manrope license is in `public/fonts/`. Chinese uses the system font stack. No request leaves for a CDN or Google Fonts.

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 export type Theme = 'light' | 'dark'
 const KEY = 'cs_theme'
-const BAR = { light: '#f5f6f5', dark: '#0b0e0c' }
+const BAR = { light: '#ffffff', dark: '#101716' }
 
 const media = () => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null)
 
@@ -32,6 +32,8 @@ export function useTheme(): [Theme, (t: Theme) => void] {
     m.addEventListener?.('change', on)
     return () => m.removeEventListener?.('change', on)
   }, [])
+
+  useEffect(() => apply(theme), [theme])
 
   const setTheme = (t: Theme) => {
     setThemeState(t)

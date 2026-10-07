@@ -8,6 +8,8 @@ import BountyPage from './pages/Bounty'
 
 // The bounty page is what phones open from the QR code, so it ships in the main bundle.
 // Everything else loads on demand; Controls carries wagmi and viem.
+const LandingPage = lazy(() => import('./pages/Landing'))
+const TeamAccess = lazy(() => import('./pages/TeamAccess'))
 const LedgerPage = lazy(() => import('./pages/Ledger'))
 const InboxPage = lazy(() => import('./pages/Inbox'))
 const ControlsPage = lazy(() => import('./pages/Controls'))
@@ -35,12 +37,14 @@ export default function App() {
         <HashRouter>
           <Suspense fallback={<Loading />}>
             <Routes>
-              <Route path="/" element={<Navigate to="/bounty" replace />} />
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<TeamAccess />} />
+              <Route path="/signup" element={<Navigate to="/login" replace />} />
               <Route path="/bounty" element={<BountyPage />} />
               <Route path="/ledger" element={<LedgerPage />} />
               <Route path="/inbox" element={<InboxPage />} />
               <Route path="/controls" element={<ControlsPage />} />
-              <Route path="*" element={<Navigate to="/bounty" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
         </HashRouter>

@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { shortAddr } from '../lib/format'
 import { useLang } from '../i18n'
-import { api, setAdminToken, getAdminToken } from '../api/client'
+import { getAdminToken } from '../api/client'
+import { Navigate, useLocation } from 'react-router-dom'
 import type { EvalResults } from '../api/types'
 
 export function Address({ value, lead = 6, tail = 4, className = '' }: { value?: string | null; lead?: number; tail?: number; className?: string }) {
@@ -58,31 +59,9 @@ export function Countdown({ to, onDone }: { to: string; onDone?: () => void }) {
 }
 
 export function AdminGate({ children }: { children: ReactNode }) {
-  const { t, tr } = useLang()
-  const [token, setToken] = useState(getAdminToken() ?? '')
-  const [ok, setOk] = useState(!!getAdminToken())
-  if (ok) return <>{children}</>
-  return (
-    <main tabIndex={-1} className="mx-auto mt-16 max-w-md rounded-box border border-rule bg-field p-6">
-      <h1 className="cond text-3xl font-bold">{t.admin_title}</h1>
-      <p className="mt-2 text-ink2">{t.admin_body}</p>
-      {api.mode === 'mock' && <p className="mt-3 text-sm text-ink2">{tr('Mock preview: enter any text to explore. No wallet is needed.', '模拟预览：输入任意文字即可体验，无需钱包。')}</p>}
-      <form
-        className="mt-5 flex gap-2"
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (!token.trim()) return
-          setAdminToken(token.trim())
-          setOk(true)
-        }}
-      >
-        <input className="field" type="password" autoComplete="off" placeholder={t.admin_ph} value={token} onChange={(e) => setToken(e.target.value)} aria-label={t.admin_ph} />
-        <button className="btn btn-ink" type="submit">
-          {t.admin_go}
-        </button>
-      </form>
-    </main>
-  )
+  const location = useLocation()
+  if (getAdminToken()) return <>{children}</>
+  return <Navigate to={'/login?next=' + encodeURIComponent(location.pathname)} replace />
 }
 
 /** Guard v1 vs v2 on held-out attacks. Renders nothing until results exist. */

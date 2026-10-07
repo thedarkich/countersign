@@ -1,4 +1,6 @@
 import type {
+  Health,
+  ReputationView,
   AgentKind,
   AppConfig,
   Attempt,
@@ -50,6 +52,8 @@ export interface MockOwner {
 
 export interface Api {
   mode: 'live' | 'mock'
+  health(): Promise<Health>
+  reputation(): Promise<ReputationView>
   config(): Promise<AppConfig>
   stats(): Promise<Stats>
   leaderboard(): Promise<LeaderboardEntry[]>
@@ -126,6 +130,8 @@ function form(input: SubmitInput): FormData {
 
 const liveApi: Api = {
   mode: 'live',
+  health: () => request('/api/health'),
+  reputation: () => request('/api/reputation'),
   config: () => request('/api/config'),
   stats: () => request('/api/stats'),
   leaderboard: () => request('/api/leaderboard'),

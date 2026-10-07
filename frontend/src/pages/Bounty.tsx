@@ -130,7 +130,9 @@ function Leaderboard({ entries }: { entries?: import('../api/types').Leaderboard
 }
 
 function SubmitForm({ serial, onSubmitted }: { serial: string; onSubmitted: (id: string) => void }) {
-  const { t, lang } = useLang()
+  const { t, lang, tr } = useLang()
+  const health = useQuery({ queryKey: ['health'], queryFn: api.health, refetchInterval: 15_000 })
+  const closed = !health.data || health.data.degraded_reasons.some(r => ['AI_DISABLED', 'TRANSACTIONS_DISABLED', 'BOUNTY_NOT_OPEN'].includes(r))
   const [nickname, setNickname] = useState(() => {
     try {
       return localStorage.getItem('cs_nick') ?? ''
@@ -165,6 +167,7 @@ function SubmitForm({ serial, onSubmitted }: { serial: string; onSubmitted: (id:
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (closed) return
     setError(null)
     if (!nickname.trim()) return setError(t.need_nickname)
     if (address.trim() && !isAddress(address)) return setError(t.bad_address)
@@ -201,6 +204,7 @@ function SubmitForm({ serial, onSubmitted }: { serial: string; onSubmitted: (id:
         </span>
       </div>
 
+      {closed && <p className="mx-5 mt-4 rounded-box border border-rule bg-sheet p-3 text-sm text-ink2" role="status">{health.data ? tr('This preview is read-only. Public submissions are not open yet.', '当前为只读预览，公众提交尚未开放。') : health.isError ? tr('Submission availability could not be checked. Please retry later.', '无法确认提交状态，请稍后重试。') : tr('Checking submission availability…', '正在检查提交状态…')}</p>}
       <div className="form-personal">
         <label><span>{t.nickname}</span><input className="field" value={nickname} maxLength={24} placeholder={t.nickname_ph} onChange={e => setNickname(e.target.value)} /></label>
         <label><span>{t.address} <span className="text-ink2">({lang === 'zh' ? '选填' : 'optional'})</span></span><input className="field font-mono text-sm" value={address} placeholder="0x…" spellCheck={false} autoCapitalize="off" onChange={e => setAddress(e.target.value)} /><span className="text-xs text-ink2">{t.address_hint}</span></label>
@@ -246,14 +250,14 @@ function SubmitForm({ serial, onSubmitted }: { serial: string; onSubmitted: (id:
             </label>
           </div>
         ) : (
-          <textarea className="field min-h-[7rem] resize-y" maxLength={4000} placeholder={t.message_ph} value={text} onChange={(e) => setText(e.target.value)} />
+          <textarea aria-label={t.tab_message} className="field min-h-[7rem] resize-y" maxLength={4000} placeholder={t.message_ph} value={text} onChange={(e) => setText(e.target.value)} />
         )}
         {error && (
           <p role="alert" className="mt-2 text-sm font-semibold text-cinnabar">
             {error}
           </p>
         )}
-        <button type="submit" className="btn btn-ink mt-3 w-full py-3 text-[1.05rem]" disabled={busy || shrinking}>
+        <button type="submit" className="btn btn-ink mt-3 w-full py-3 text-[1.05rem]" disabled={busy || shrinking || closed}>
           {busy ? t.submitting : t.submit}<Icon name="arrow" size={17} />
         </button>
       </div>
