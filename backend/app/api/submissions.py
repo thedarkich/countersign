@@ -5,8 +5,8 @@ from fastapi import Request
 from sqlmodel import Session
 from starlette.datastructures import UploadFile
 
-from app.api.security import device_id, hash_private, problem
-from app.models import SubmissionMeta
+from app.api.security import device_id, hash_private, problem, session_user
+from app.models import AttemptOwner, SubmissionMeta
 from app.pipeline.ingest import MAX_BYTES, InputError
 from app.pipeline.runner import new_attempt
 from app.storage import write_private_bytes
@@ -112,6 +112,9 @@ async def submit(request: Request, *, source):
                 attempt.preview_path = str(preview)
             with Session(runtime.store.engine) as session:
                 session.add(attempt)
+                owner = None if bounty else session_user(request)
+                if owner:
+                    session.add(AttemptOwner(attempt_id=attempt.id, user_id=owner["id"]))
                 if bounty:
                     salt = runtime.settings.ip_hash_salt.get_secret_value()
                     ip = request.client.host if request.client else "unknown"

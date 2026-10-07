@@ -1,9 +1,9 @@
-"""Invite-only accounts: registration, sign-in, durable sessions, same-origin writes and limits."""
+"""Workspace accounts: open sign-up, sign-in, durable sessions, per-account invoices, same-origin writes and limits."""
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
-from test_api import ApiChain, public_state
+from test_api import ApiChain, done, public_state
 from test_runner import Models
 
 from app.api.accounts import hash_password, verify_password
@@ -13,18 +13,13 @@ from app.config import Settings
 from app.main import create_app
 from app.models import UserAccount, UserSession
 
-INVITE = "team-invite-for-tests"
 ORIGIN = {"Origin": "http://testserver"}
 ADMIN = {"Authorization": "Bearer local-api-test-token"}
-MEMBER = {
-    "name": "Test Member",
-    "email": "Member@Example.com",
-    "password": "correct horse battery",
-    "invite_code": INVITE,
-}
+MEMBER = {"name": "Test Member", "email": "Member@Example.com", "password": "correct horse battery"}
+INVOICE = {"nickname": "team", "agent": "guarded", "text": "private invoice"}
 
 
-def system(tmp_path, invite=INVITE):
+def system(tmp_path):
     settings = Settings(
         _env_file=None,
         scam_screening_enabled=False,
@@ -32,9 +27,9 @@ def system(tmp_path, invite=INVITE):
         static_dir=tmp_path / "static",
         admin_token="local-api-test-token",
         ip_hash_salt="synthetic-privacy-salt",
-        team_invite_code=invite,
         llm_enabled=True,
         transactions_enabled=True,
+        batch_enabled=True,
         public_base_url="http://testserver",
     )
     chain = ApiChain()
@@ -64,10 +59,8 @@ def test_passwords_are_salted_scrypt_hashes():
     assert not verify_password("not-a-hash", "correct horse battery")
 
 
-def test_registration_needs_the_invite_code_and_starts_a_session(accounts):
+def test_open_registration_starts_a_session(accounts):
     client, runtime = accounts
-    refused = register(client, invite_code="guess")
-    assert refused.status_code == 403 and SESSION_COOKIE not in refused.cookies
     created = register(client)
     assert created.status_code == 201
     assert created.json() == {"id": created.json()["id"], "name": "Test Member", "email": "member@example.com"}
@@ -80,12 +73,6 @@ def test_registration_needs_the_invite_code_and_starts_a_session(accounts):
         stored = session.exec(select(UserSession)).one()
     assert "correct horse battery" not in account.password_hash
     assert stored.token_hash == session_digest(token) != token
-
-
-def test_registration_closed_without_a_configured_invite(tmp_path):
-    client, _ = system(tmp_path, invite="")
-    with client:
-        assert register(client).status_code == 503
 
 
 def test_one_account_per_email_case_insensitive(accounts):
@@ -129,18 +116,44 @@ def test_logout_invalidates_the_session_server_side(accounts):
     assert client.get("/api/team/attempts").status_code == 401
 
 
-def test_session_grants_team_reads_and_same_origin_writes(accounts):
+def test_session_writes_need_same_origin(accounts):
     client, _ = accounts
     assert client.get("/api/team/attempts").status_code == 401
     register(client)
     assert client.get("/api/team/attempts").status_code == 200
-    data = {"nickname": "team", "agent": "guarded", "text": "private invoice"}
-    assert client.post("/api/team/attempts", data=data).status_code == 403
-    assert client.post("/api/team/attempts", data=data, headers={"Origin": "https://evil.example"}).status_code == 403
-    assert client.post("/api/team/attempts", data=data, headers=ORIGIN).status_code == 202
+    assert client.post("/api/team/attempts", data=INVOICE).status_code == 403
+    assert client.post("/api/team/attempts", data=INVOICE, headers={"Origin": "https://evil.example"}).status_code == 403
+    assert client.post("/api/team/attempts", data=INVOICE, headers=ORIGIN).status_code == 202
     # the admin token keeps working for scripts without an Origin header
     client.cookies.clear()
-    assert client.post("/api/team/attempts", data=data, headers=ADMIN).status_code == 202
+    assert client.post("/api/team/attempts", data=INVOICE, headers=ADMIN).status_code == 202
+
+
+def test_each_account_sees_only_its_own_invoices(accounts):
+    client, _ = accounts
+    register(client)
+    mine = client.post("/api/team/attempts", data=INVOICE, headers=ORIGIN).json()["attempt_id"]
+    done(client, mine, headers={})
+    alice = client.cookies.get(SESSION_COOKIE)
+    client.cookies.clear()
+    register(client, name="Other Member", email="other@example.com")
+    assert client.get("/api/team/attempts").json() == []
+    view = client.get("/api/attempts/" + mine).json()
+    assert view.get("extraction") is None and view.get("proposal") is None
+    assert client.get(f"/api/attempts/{mine}/preview.png").status_code == 403
+    client.cookies.set(SESSION_COOKIE, alice)
+    assert [a["id"] for a in client.get("/api/team/attempts").json()] == [mine]
+    assert client.get("/api/attempts/" + mine).json().get("extraction") is not None
+    client.cookies.clear()
+    assert [a["id"] for a in client.get("/api/team/attempts", headers=ADMIN).json()] == [mine]
+
+
+def test_accounts_cannot_run_the_shared_batch(accounts):
+    client, _ = accounts
+    register(client)
+    assert client.post("/api/team/batch", json={"folder": "clean"}, headers=ORIGIN).status_code == 403
+    client.cookies.clear()
+    assert client.post("/api/team/batch", json={"folder": "clean"}, headers=ADMIN).status_code != 403
 
 
 def test_expired_sessions_are_rejected(accounts):

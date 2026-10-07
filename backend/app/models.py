@@ -133,13 +133,20 @@ class EventAudit(SQLModel, table=True):
 
 
 class UserAccount(SQLModel, table=True):
-    """Invite-only team workspace account. Grants team API access, never wallet authority."""
+    """Workspace account. Sees only its own invoices; never has wallet authority."""
 
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
     email: str = Field(unique=True, index=True)
     name: str
     password_hash: str
     created_at: str = Field(default_factory=now_iso)
+
+
+class AttemptOwner(SQLModel, table=True):
+    """The account that submitted a team attempt. Accounts see only their own attempts."""
+
+    attempt_id: str = Field(primary_key=True)
+    user_id: str = Field(index=True)
 
 
 class UserSession(SQLModel, table=True):

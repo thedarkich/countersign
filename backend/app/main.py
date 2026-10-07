@@ -32,12 +32,20 @@ from app.api.schemas import (
     Registry,
     Stats,
 )
-from app.api.security import RequestBoundary, can_read_private, problem, require_admin
+from app.api.security import (
+    RequestBoundary,
+    can_read_private,
+    has_admin_token,
+    problem,
+    require_admin,
+    require_admin_token,
+    session_user,
+)
 from app.api.submissions import submit
 from app.api.views import CHANGE_LABELS, attempt_view, ledger_view, stat_block
 from app.chain.errors import ChainSendError
 from app.config import Settings
-from app.models import Attempt, BatchRecord, ChainEvent
+from app.models import Attempt, AttemptOwner, BatchRecord, ChainEvent
 from app.threat_intel import WalletSecurityView
 
 
@@ -284,6 +292,11 @@ def create_app(settings=None, *, runtime=None):
         )
         if source:
             query = query.where(Attempt.source == source)
+        if not has_admin_token(request):  # an account sees only what it submitted
+            owned = select(AttemptOwner.attempt_id).where(
+                AttemptOwner.user_id == session_user(request)["id"]
+            )
+            query = query.where(Attempt.id.in_(owned))
         with Session(current.store.engine) as session:
             values = session.exec(query).all()
         return [attempt_view(a, private=True) for a in values]
@@ -297,13 +310,17 @@ def create_app(settings=None, *, runtime=None):
             if entry.get("stage") is True
         ]
 
-    @team.post("/batch", status_code=202)
+    @team.post("/batch", status_code=202, dependencies=[Depends(require_admin_token)])
     async def batch(request: Request, body: BatchInput):
         from app.api.batch import create_batch
 
         return await create_batch(request.app.state.runtime)
 
-    @team.get("/batch/{batch_id}", response_model=BatchSummary)
+    @team.get(
+        "/batch/{batch_id}",
+        response_model=BatchSummary,
+        dependencies=[Depends(require_admin_token)],
+    )
     async def batch_status(request: Request, batch_id: UUID):
         current = request.app.state.runtime
         with Session(current.store.engine) as session:

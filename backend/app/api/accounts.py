@@ -1,6 +1,6 @@
-"""Invite-only team accounts: email/password sign-in with durable, hashed session cookies.
+"""Workspace accounts: email/password sign-in with durable, hashed session cookies.
 
-An account grants the same team API access as the admin token. It never grants wallet or owner authority.
+Each account sees only the invoices it submitted. It never grants wallet or owner authority.
 """
 
 import asyncio
@@ -35,7 +35,6 @@ class Credentials(BaseModel):
 
 class Registration(Credentials):
     name: str = Field(min_length=2, max_length=60)
-    invite_code: str = Field(min_length=1, max_length=200)
 
 
 class AccountView(BaseModel):
@@ -146,12 +145,7 @@ def start_session(request: Request, response: Response, user_id: str):
 
 @router.post("/register", status_code=201, response_model=AccountView)
 async def register(request: Request, response: Response, body: Registration):
-    expected = request.app.state.runtime.settings.team_invite_code.get_secret_value()
-    if not expected:
-        raise problem(503, "Account registration is not open.", "账户注册尚未开放。")
     throttle(request, [("register-global", "global", 60, 20), *device_limits(request, "register-device", 3600, 10)])
-    if not hmac.compare_digest(body.invite_code.strip().encode(), expected.encode()):
-        raise problem(403, "The invite code is not valid.", "邀请码无效。")
     email, name = normalize_email(body.email), clean_name(body.name)
     password_hash = await asyncio.to_thread(hash_password, body.password)
     account = UserAccount(email=email, name=name, password_hash=password_hash)

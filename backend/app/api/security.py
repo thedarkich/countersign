@@ -12,7 +12,7 @@ from sqlalchemy.dialects.sqlite import insert
 from sqlmodel import Session
 from starlette.responses import JSONResponse
 
-from app.models import RateBucket, UserAccount, UserSession
+from app.models import AttemptOwner, RateBucket, UserAccount, UserSession
 from app.pipeline.ingest import MAX_BYTES
 
 SESSION_COOKIE = "countersign_session"
@@ -69,6 +69,21 @@ def is_admin(request: Request):
     return has_admin_token(request) or session_user(request) is not None
 
 
+def owns_attempt(request: Request, attempt_id: str):
+    user = session_user(request)
+    if user is None:
+        return False
+    with Session(request.app.state.runtime.store.engine) as session:
+        owner = session.get(AttemptOwner, attempt_id)
+    return owner is not None and owner.user_id == user["id"]
+
+
+def require_admin_token(request: Request):
+    """Shared-budget operations (batches) stay with the team token, not individual accounts."""
+    if not has_admin_token(request):
+        raise problem(403, "Only the team token can run this.", "仅团队令牌可执行此操作。")
+
+
 def require_admin(request: Request):
     if has_admin_token(request):
         return
@@ -94,7 +109,7 @@ def device_id(request: Request, *, required=False):
 
 def can_read_private(request, attempt):
     device = device_id(request)
-    return is_admin(request) or bool(
+    return has_admin_token(request) or owns_attempt(request, attempt.id) or bool(
         attempt.source == "bounty"
         and attempt.device_id
         and device

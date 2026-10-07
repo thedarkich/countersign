@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { api, AuthError, clearAdminToken } from '../api/client'
+import { api, AuthError, clearAdminToken, getAdminToken } from '../api/client'
 import { useAuth } from '../lib/auth'
 import type { AgentKind, Attempt, BatchSummary, DemoInvoice, Source } from '../api/types'
 import { useLang } from '../i18n'
@@ -117,16 +117,17 @@ function Inbox() {
       </dl>
       <DemoShelf target={target} onSent={onSent} />
 
-      <div className="mt-4 grid gap-4 md:grid-cols-[1fr_20rem]">
+      {/* the clean batch spends the shared AI budget, so only the team token runs it */}
+      <div className={`mt-4 grid gap-4 ${getAdminToken() ? 'md:grid-cols-[1fr_20rem]' : ''}`}>
         <DropZone target={target} onSent={onSent} />
-        <BatchBox
+        {getAdminToken() && <BatchBox
           batchId={batchId}
           onStart={async () => {
             const r = await api.runBatch()
             setBatchId(r.batch_id)
             setSource('all')
           }}
-        />
+        />}
       </div>
 
       {pair && <Compare pair={pair} attempts={attempts} onOpen={setSelected} onClose={() => setPair(null)} />}
