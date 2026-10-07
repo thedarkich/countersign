@@ -189,3 +189,29 @@ def test_tuple_and_dynamic_string_decode_preserves_values():
             "symbol": contract_read(token, "symbol"),
         },
     ) == {"change": change, "symbol": "USDT"}
+
+
+def test_registry_snapshot_retries_transient_read_failures():
+    import asyncio
+
+    from app.chain.client import VaultClient
+
+    def vault(failures):
+        client = object.__new__(VaultClient)
+        calls = []
+
+        def read(network):
+            calls.append(network)
+            if len(calls) <= failures:
+                raise ChainSendError("Registry block changed while reading")
+            return "snapshot"
+
+        client._snapshot = read
+        return client, calls
+
+    client, calls = vault(2)
+    assert asyncio.run(client.snapshot("testnet")) == "snapshot" and len(calls) == 3
+    client, calls = vault(3)
+    with pytest.raises(ChainSendError):
+        asyncio.run(client.snapshot("testnet"))
+    assert len(calls) == 3

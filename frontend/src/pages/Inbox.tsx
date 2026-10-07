@@ -240,7 +240,7 @@ function DemoShelf({ target, onSent }: { target: Target; onSent: OnSent }) {
   return (
     <section className="mt-5" aria-label={tr('Demo invoices', '演示发票')}>
       <h2 className="mb-3 mt-7 text-base font-semibold">{tr('Try a demo scenario', '试试演示场景')}</h2>
-      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {q.data.map((p) => (
           <li key={p.name}>
             <button

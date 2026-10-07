@@ -166,7 +166,15 @@ class VaultClient:
         )
 
     async def snapshot(self, network: str) -> RegistrySnapshot:
-        return await asyncio.to_thread(self._snapshot, network)
+        # Public RPC nodes behind one URL can briefly disagree about the latest block. The
+        # snapshot is read-only, so retrying a failed one costs nothing and changes no state.
+        for attempt in range(3):
+            try:
+                return await asyncio.to_thread(self._snapshot, network)
+            except Exception:
+                if attempt == 2:
+                    raise
+                await asyncio.sleep(0.5 * (attempt + 1))
 
     async def invoice_paid(self, network: str, invoice_hash: str) -> bool:
         def read():
