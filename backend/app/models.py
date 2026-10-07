@@ -156,3 +156,60 @@ class UserSession(SQLModel, table=True):
     user_id: str = Field(index=True)
     expires_at: int = Field(index=True)
     created_at: str = Field(default_factory=now_iso)
+
+
+class WalletLink(SQLModel, table=True):
+    """The wallet an account proved it controls by signing a one-time message."""
+
+    user_id: str = Field(primary_key=True)
+    address: str = Field(index=True)
+    linked_at: str = Field(default_factory=now_iso)
+
+
+class WalletChallenge(SQLModel, table=True):
+    """One pending link message per account; single use, short-lived."""
+
+    user_id: str = Field(primary_key=True)
+    address: str
+    message: str
+    expires_at: int
+
+
+class WalletPolicy(SQLModel, table=True):
+    """The account's own maximum per payment, in wei. Raising it waits; lowering is immediate."""
+
+    user_id: str = Field(primary_key=True)
+    max_wei: str
+    pending_max_wei: str | None = None
+    pending_at: int | None = None
+
+
+class Payee(SQLModel, table=True):
+    """A whitelisted address. It can receive only from active_at on."""
+
+    __table_args__ = (UniqueConstraint("user_id", "address"),)
+
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    user_id: str = Field(index=True)
+    address: str
+    label: str
+    created_at: str = Field(default_factory=now_iso)
+    active_at: int
+
+
+class WalletPayment(SQLModel, table=True):
+    """A payment the service approved, then the transaction the wallet actually sent for it."""
+
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    user_id: str = Field(index=True)
+    chain_id: int
+    wallet: str
+    payee: str
+    payee_label: str
+    amount_wei: str
+    status: str = "approved"  # approved, then sent, then confirmed | failed | mismatch; or expired
+    tx_hash: str | None = Field(default=None, unique=True)
+    block_number: int | None = None
+    detail: str | None = None
+    created_at: str = Field(default_factory=now_iso)
+    expires_at: int

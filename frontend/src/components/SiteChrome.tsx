@@ -25,7 +25,7 @@ export function SiteHeader({ workspace = false, network, mock = false }: { works
     finally { setBusy(false) }
   }
   const links = workspace
-    ? [['/inbox', tr('Inbox', '发票工作台')], ['/ledger', tr('Ledger', '账本')], ['/controls', tr('Controls', '管理控制台')], ['/bounty', tr('Challenge', '挑战防线')]]
+    ? [['/inbox', tr('Inbox', '发票工作台')], ['/wallet', tr('Wallet', '钱包')], ['/ledger', tr('Ledger', '账本')], ['/controls', tr('Controls', '管理控制台')], ['/bounty', tr('Challenge', '挑战防线')]]
     : [['/?section=workflow', tr('How it works', '工作流程')], ['/?section=stack', tr('Building blocks', '核心能力')], ['/inbox', tr('Workspace', '工作台')]]
   return <header className="site-header">
     <div className="site-topbar">

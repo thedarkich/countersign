@@ -20,6 +20,9 @@ class Settings(BaseSettings):
 
     network: Literal["testnet", "mainnet"] = "testnet"
     bounty_network: Literal["testnet", "mainnet"] = "testnet"
+    # Payments people send from their own wallets (Wallet page); independent of the team vault network.
+    wallet_network: Literal["testnet", "mainnet"] = "mainnet"
+    payee_delay_seconds: int = Field(default=60, ge=0, le=86400)
     botchain_mainnet_rpc: str = "https://rpc.botchain.ai"
     botchain_testnet_rpc: str = "https://rpc.bohr.life"
     explorer_url_mainnet: str = "https://scan.botchain.ai"

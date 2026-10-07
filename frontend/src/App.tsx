@@ -15,6 +15,7 @@ const TeamAccess = lazy(() => import('./pages/TeamAccess'))
 const LedgerPage = lazy(() => import('./pages/Ledger'))
 const InboxPage = lazy(() => import('./pages/Inbox'))
 const ControlsPage = lazy(() => import('./pages/Controls'))
+const WalletPage = lazy(() => import('./pages/Wallet'))
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -48,6 +49,7 @@ export default function App() {
                 <Route path="/ledger" element={<LedgerPage />} />
                 <Route path="/inbox" element={<InboxPage />} />
                 <Route path="/controls" element={<ControlsPage />} />
+                <Route path="/wallet" element={<WalletPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>

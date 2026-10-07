@@ -111,7 +111,7 @@ export default function ControlsPage() {
         ) : api.mode === 'mock' ? (
           <Controls config={config.data} signer={{ act: mockAct, canSend: true, isOwner: true }} banner={<MockBanner />} />
         ) : (
-          <WagmiProvider config={wagmiConfig}>
+          <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>
             <LiveControls config={config.data} />
           </WagmiProvider>
         )}

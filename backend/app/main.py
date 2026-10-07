@@ -43,6 +43,7 @@ from app.api.security import (
 )
 from app.api.submissions import submit
 from app.api.views import CHANGE_LABELS, attempt_view, ledger_view, stat_block
+from app.api.wallet import router as wallet
 from app.chain.errors import ChainSendError
 from app.config import Settings
 from app.models import Attempt, AttemptOwner, BatchRecord, ChainEvent
@@ -378,6 +379,7 @@ def create_app(settings=None, *, runtime=None):
 
     app.include_router(team)
     app.include_router(accounts)
+    app.include_router(wallet)
 
     @app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
     async def unknown_api(path: str):
