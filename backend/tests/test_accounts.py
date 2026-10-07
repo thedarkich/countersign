@@ -63,10 +63,11 @@ def test_open_registration_starts_a_session(accounts):
     client, runtime = accounts
     created = register(client)
     assert created.status_code == 201
-    assert created.json() == {"id": created.json()["id"], "name": "Test Member", "email": "member@example.com"}
+    user = created.json()["user"]  # the shape the sign-in page reads
+    assert user == {"id": user["id"], "name": "Test Member", "email": "member@example.com"}
     cookie = created.headers["set-cookie"].lower()
     assert "httponly" in cookie and "samesite=strict" in cookie and "path=/" in cookie
-    assert client.get("/api/me").json()["email"] == "member@example.com"
+    assert client.get("/api/me").json() == {"user": user}
     token = client.cookies.get(SESSION_COOKIE)
     with Session(runtime.store.engine) as session:
         account = session.exec(select(UserAccount)).one()
@@ -103,7 +104,8 @@ def test_login_logout_and_generic_failures(accounts):
     assert wrong.status_code == unknown.status_code == 401
     assert wrong.json() == unknown.json()
     ok = client.post("/api/login", json={"email": "member@EXAMPLE.com", "password": MEMBER["password"]})
-    assert ok.status_code == 200 and client.get("/api/me").status_code == 200
+    assert ok.status_code == 200 and ok.json()["user"]["email"] == "member@example.com"
+    assert client.get("/api/me").json()["user"]["name"] == "Test Member"
 
 
 def test_logout_invalidates_the_session_server_side(accounts):

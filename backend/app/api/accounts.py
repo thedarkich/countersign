@@ -43,6 +43,10 @@ class AccountView(BaseModel):
     email: str
 
 
+class AccountResponse(BaseModel):
+    user: AccountView
+
+
 def hash_password(password: str) -> str:
     salt = secrets.token_bytes(16)
     digest = hashlib.scrypt(password.encode(), salt=salt, **SCRYPT)
@@ -143,7 +147,7 @@ def start_session(request: Request, response: Response, user_id: str):
     )
 
 
-@router.post("/register", status_code=201, response_model=AccountView)
+@router.post("/register", status_code=201, response_model=AccountResponse)
 async def register(request: Request, response: Response, body: Registration):
     throttle(request, [("register-global", "global", 60, 20), *device_limits(request, "register-device", 3600, 10)])
     email, name = normalize_email(body.email), clean_name(body.name)
@@ -157,10 +161,10 @@ async def register(request: Request, response: Response, body: Registration):
             raise problem(409, "This email already has an account. Sign in instead.", "该邮箱已注册，请直接登录。") from None
         view = AccountView(id=account.id, name=account.name, email=account.email)
     start_session(request, response, view.id)
-    return view
+    return {"user": view}
 
 
-@router.post("/login", response_model=AccountView)
+@router.post("/login", response_model=AccountResponse)
 async def login(request: Request, response: Response, body: Credentials):
     email = normalize_email(body.email)
     throttle(
@@ -178,7 +182,7 @@ async def login(request: Request, response: Response, body: Credentials):
     if not await asyncio.to_thread(verify_password, stored, body.password) or view is None:
         raise problem(401, "Email or password is incorrect.", "邮箱或密码不正确。")
     start_session(request, response, view.id)
-    return view
+    return {"user": view}
 
 
 @router.post("/logout")
@@ -191,9 +195,9 @@ async def logout(request: Request, response: Response):
     return {"ok": True}
 
 
-@router.get("/me", response_model=AccountView)
+@router.get("/me", response_model=AccountResponse)
 async def me(request: Request):
     user = session_user(request)
     if user is None:
         raise problem(401, "Not signed in.", "尚未登录。")
-    return user
+    return {"user": user}
