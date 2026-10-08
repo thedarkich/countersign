@@ -235,7 +235,7 @@ function Controls({ config, signer, banner }: { config: AppConfig; signer: Signe
   const run = useCallback(
     async (key: string, a: Action, done?: () => void) => {
       setBusy(key)
-      setStatus({ tone: 'wait', text: api.mode === 'mock' ? tr('Working…', '处理中…') : tr('Confirm in your wallet…', '请在钱包里确认…') })
+      setStatus({ tone: 'wait', text: api.mode === 'mock' ? tr('Working…', '处理中…') : tr('Approve in your wallet. You only pay the network fee; nothing is sent to anyone.', '请在钱包里确认。你只需支付网络手续费，不会向任何人转账。') })
       try {
         const hash = await signer.act(a, (h) => setStatus({ tone: 'wait', text: tr('Sent. Waiting for the block…', '已发送，等待出块…'), hash: h }))
         setStatus({ tone: 'ok', text: api.mode === 'mock' ? tr('Done (simulated).', '完成（模拟）。') : tr('Confirmed on-chain.', '已上链确认。'), hash: hash || undefined })
@@ -273,6 +273,13 @@ function Controls({ config, signer, banner }: { config: AppConfig; signer: Signe
           <Tag kind="wait" text={waitText} /> {tr('queued first, then anyone can execute it', '先排队，时间到了谁都能执行')}
         </span>
       </div>
+      {api.mode === 'live' && (
+        <p className="mt-2 max-w-[44rem] text-sm text-ink2">
+          {config.network === 'testnet'
+            ? tr('Every button here changes the vault’s rules on BOT Chain, so your wallet asks you to approve a small network fee. On this testnet the fee is test BOT with no real value. No money is paid to anyone.', '这里的每个按钮都会在 BOT Chain 上修改金库规则，所以钱包会请你确认一笔很小的网络手续费。在测试网上，这笔手续费是没有实际价值的测试币，不会向任何人付款。')
+            : tr('Every button here changes the vault’s rules on BOT Chain, so your wallet asks you to approve a small network fee in BOT. No money is paid to anyone.', '这里的每个按钮都会在 BOT Chain 上修改金库规则，所以钱包会请你确认一笔很小的 BOT 网络手续费，不会向任何人付款。')}
+        </p>
+      )}
 
       <div className="mt-5">{banner}</div>
 
@@ -304,7 +311,7 @@ function Controls({ config, signer, banner }: { config: AppConfig; signer: Signe
 
           <Pending reg={r} symbol={symbol} canSend={signer.canSend} isOwner={owner} busy={busy} run={run} />
 
-          <Vendors reg={r} owner={owner} busy={busy} run={run} waitText={waitText} />
+          <Vendors reg={r} owner={owner} busy={busy} run={run} waitText={waitText} network={config.network} />
           <Budgets reg={r} owner={owner} busy={busy} run={run} waitText={waitText} symbol={symbol} />
 
           <div className="grid gap-6 lg:grid-cols-2">
@@ -437,13 +444,40 @@ function PendingRow({ c, reg, symbol, lang, canSend, isOwner, busy, run }: { c: 
   )
 }
 
-function Vendors({ reg, owner, busy, run, waitText }: PanelProps) {
+// the three made-up vendors the testnet Setup script registered (data/vendors.json); invoices and the challenge use them
+const isDemoVendor = (network: string, id: number) => network === 'testnet' && id <= 3
+
+/** Toggle for entries switched off on chain: they can never be used again, so they are hidden by default. */
+function RemovedToggle({ count, shown, onToggle }: { count: number; shown: boolean; onToggle: () => void }) {
+  const { tr } = useLang()
+  if (count === 0) return null
+  return (
+    <button type="button" className="block w-full border-t border-rule px-4 py-2 text-left text-sm text-ink2 underline decoration-rule underline-offset-4 hover:decoration-ink" onClick={onToggle}>
+      {shown ? tr('Hide removed', '隐藏已移除') : tr(`Show removed (${count})`, `显示已移除（${count}）`)}
+    </button>
+  )
+}
+
+function Vendors({ reg, owner, busy, run, waitText, network }: PanelProps & { network: string }) {
   const { tr, lang } = useLang()
   const [editing, setEditing] = useState<number | null>(null)
   const [newPayout, setNewPayout] = useState('')
   const [addId, setAddId] = useState('')
   const [addPayout, setAddPayout] = useState('')
+  const [showRemoved, setShowRemoved] = useState(false)
   const nextId = useMemo(() => Math.max(0, ...reg.vendors.map((v) => v.id)) + 1, [reg.vendors])
+  const removedCount = reg.vendors.filter((v) => !v.active).length
+  const rows = showRemoved ? reg.vendors : reg.vendors.filter((v) => v.active)
+  const remove = (v: Registry['vendors'][number]) => {
+    const name = (lang === 'zh' ? v.name_zh : v.name_en) || `#${v.id}`
+    const ok = window.confirm(
+      tr(
+        `Remove ${name}?\n\nThis is permanent on BOT Chain: the vault will never pay this vendor again.\nYour wallet will ask for a small network fee. No money is paid to anyone.`,
+        `移除 ${name}？\n\n这在 BOT Chain 上是永久的：金库以后不会再向这个供应商付款。\n钱包会请你确认一笔很小的网络手续费，不会向任何人付款。`,
+      ),
+    )
+    if (ok) void run(`deact-${v.id}`, { type: 'deactivateVendor', vendorId: v.id })
+  }
   return (
     <Panel title={tr('Vendors', '供应商')}>
       <div className="overflow-x-auto">
@@ -458,10 +492,16 @@ function Vendors({ reg, owner, busy, run, waitText }: PanelProps) {
             </tr>
           </thead>
           <tbody>
-            {reg.vendors.map((v) => (
-              <tr key={v.id} className="rule-b align-top last:border-b-0">
+            {rows.length === 0 && (
+              <tr><td colSpan={5} className="px-4 py-3 text-ink2">{tr('No active vendors. Add one below.', '没有启用的供应商，请在下方新增。')}</td></tr>
+            )}
+            {rows.map((v) => (
+              <tr key={v.id} className={`rule-b align-top last:border-b-0 ${v.active ? '' : 'text-ink2'}`}>
                 <td className="num px-4 py-2.5 font-mono text-ink2">{v.id}</td>
-                <td className="px-3 py-2.5">{lang === 'zh' ? v.name_zh : v.name_en}</td>
+                <td className="px-3 py-2.5">
+                  {lang === 'zh' ? v.name_zh : v.name_en}
+                  {isDemoVendor(network, v.id) && <span className="ml-2 whitespace-nowrap rounded-box border border-rule px-1.5 py-0.5 text-xs text-ink2">{tr('Demo vendor', '演示供应商')}</span>}
+                </td>
                 <td className="px-3 py-2.5">
                   <Address value={v.payout} lead={10} tail={8} />
                   <WalletScreeningBadge address={v.payout} />
@@ -484,20 +524,25 @@ function Vendors({ reg, owner, busy, run, waitText }: PanelProps) {
                     </form>
                   )}
                 </td>
-                <td className="px-3 py-2.5">{v.active ? <span className="text-jade">{tr('Active', '启用')}</span> : <span className="text-cinnabar">{tr('Off', '已停用')}</span>}</td>
+                <td className="px-3 py-2.5">{v.active ? <span className="text-jade">{tr('Active', '启用')}</span> : <span className="text-cinnabar">{tr('Removed', '已移除')}</span>}</td>
                 <td className="whitespace-nowrap px-4 py-2 text-right">
-                  <button type="button" className="mr-2 text-sm underline decoration-rule underline-offset-4 hover:decoration-ink disabled:opacity-50" disabled={!owner} onClick={() => setEditing(editing === v.id ? null : v.id)}>
-                    {editing === v.id ? tr('Close', '收起') : tr('Change payout', '改收款地址')}
-                  </button>
-                  <button type="button" className="btn btn-cinnabar py-1 text-sm" disabled={!owner || !v.active || busy !== null} onClick={() => run(`deact-${v.id}`, { type: 'deactivateVendor', vendorId: v.id })}>
-                    {tr('Deactivate', '停用')} <Tag kind="now" />
-                  </button>
+                  {v.active && (
+                    <>
+                      <button type="button" className="mr-2 text-sm underline decoration-rule underline-offset-4 hover:decoration-ink disabled:opacity-50" disabled={!owner} onClick={() => setEditing(editing === v.id ? null : v.id)}>
+                        {editing === v.id ? tr('Cancel', '取消') : tr('Change payout', '改收款地址')}
+                      </button>
+                      <button type="button" className="btn btn-cinnabar py-1 text-sm" disabled={!owner || busy !== null} onClick={() => remove(v)}>
+                        {tr('Remove', '移除')} <Tag kind="now" />
+                      </button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      <RemovedToggle count={removedCount} shown={showRemoved} onToggle={() => setShowRemoved(!showRemoved)} />
       <form
         className="flex flex-wrap items-end gap-2 border-t border-rule bg-paper px-4 py-3"
         onSubmit={(e) => {
@@ -535,6 +580,18 @@ function Budgets({ reg, owner, busy, run, waitText, symbol }: PanelProps & { sym
     return v ? (lang === 'zh' ? v.name_zh : v.name_en) : `#${id}`
   }
   const valid = Number(f.cap) > 0 && /^\d{4}-\d{2}-\d{2}$/.test(f.expiry)
+  const [showRemoved, setShowRemoved] = useState(false)
+  const removedCount = reg.pos.filter((p) => p.closed).length
+  const rows = showRemoved ? reg.pos : reg.pos.filter((p) => !p.closed)
+  const remove = (p: Registry['pos'][number]) => {
+    const ok = window.confirm(
+      tr(
+        `Remove budget ${p.ref}?\n\nThis is permanent on BOT Chain: nothing more can be paid from it.\nYour wallet will ask for a small network fee. No money is paid to anyone.`,
+        `移除预算 ${p.ref}？\n\n这在 BOT Chain 上是永久的：以后不能再从这个预算付款。\n钱包会请你确认一笔很小的网络手续费，不会向任何人付款。`,
+      ),
+    )
+    if (ok) void run(`close-${p.po_id}`, { type: 'closePO', poId: p.po_id })
+  }
   return (
     <Panel title={tr('Budgets', '预算')}>
       <div className="overflow-x-auto">
@@ -551,7 +608,10 @@ function Budgets({ reg, owner, busy, run, waitText, symbol }: PanelProps & { sym
             </tr>
           </thead>
           <tbody>
-            {reg.pos.map((p) => {
+            {rows.length === 0 && (
+              <tr><td colSpan={7} className="px-4 py-3 text-ink2">{tr('No active budgets. Add one below.', '没有可用的预算，请在下方新增。')}</td></tr>
+            )}
+            {rows.map((p) => {
               const share = Number(p.cap) > 0 ? Math.max(0, Math.min(1, Number(p.remaining) / Number(p.cap))) : 0
               return (
                 <tr key={p.po_id} className={`rule-b last:border-b-0 ${p.closed ? 'text-ink2' : ''}`}>
@@ -568,10 +628,10 @@ function Budgets({ reg, owner, busy, run, waitText, symbol }: PanelProps & { sym
                   <td className="num px-3 py-2.5 font-mono text-[0.88rem]">{p.expiry}</td>
                   <td className="px-4 py-2 text-right">
                     {p.closed ? (
-                      <span className="text-sm text-cinnabar">{tr('Closed', '已关闭')}</span>
+                      <span className="text-sm text-cinnabar">{tr('Removed', '已移除')}</span>
                     ) : (
-                      <button type="button" className="btn btn-cinnabar whitespace-nowrap py-1 text-sm" disabled={!owner || busy !== null} onClick={() => run(`close-${p.po_id}`, { type: 'closePO', poId: p.po_id })}>
-                        {tr('Close', '关闭')} <Tag kind="now" />
+                      <button type="button" className="btn btn-cinnabar whitespace-nowrap py-1 text-sm" disabled={!owner || busy !== null} onClick={() => remove(p)}>
+                        {tr('Remove', '移除')} <Tag kind="now" />
                       </button>
                     )}
                   </td>
@@ -581,6 +641,7 @@ function Budgets({ reg, owner, busy, run, waitText, symbol }: PanelProps & { sym
           </tbody>
         </table>
       </div>
+      <RemovedToggle count={removedCount} shown={showRemoved} onToggle={() => setShowRemoved(!showRemoved)} />
       <form
         className="grid grid-cols-2 items-end gap-2 border-t border-rule bg-paper px-4 py-3 xl:grid-cols-[5.5rem_minmax(0,1fr)_7rem_9.5rem_6rem_auto]"
         onSubmit={(e) => {
