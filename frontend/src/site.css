@@ -5,9 +5,9 @@ html { scroll-padding-top: 24px; }
 .public-site { min-height: 100dvh; }
 .site-header { width: min(1280px, calc(100% - 48px)); margin: 0 auto; }
 .site-topbar { min-height: 92px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--rule); }
-.site-brand { font-size: 21px; font-weight: 800; letter-spacing: -.7px; color: var(--ink); white-space: nowrap; display: flex; align-items: center; }
-.brand-logo { height: 66px; width: auto; display: block; }
-:root[data-theme="dark"] .brand-logo { filter: invert(1) hue-rotate(180deg); mix-blend-mode: screen; }
+.site-brand { font-size: 21px; font-weight: 800; letter-spacing: -.7px; color: var(--ink); white-space: nowrap; display: flex; align-items: center; gap: 10px; }
+/* the fox mark has a transparent background, so it needs no dark-mode filter */
+.brand-mark { height: 44px; width: 44px; display: block; }
 .brand-point { color: var(--action); }
 .site-actions { display: flex; align-items: center; gap: 18px; }
 .site-actions [role=group] { border-color: var(--rule); font-size: 13px; border-radius: 8px; }
@@ -146,7 +146,7 @@ html { scroll-padding-top: 24px; }
 @media (max-width: 720px) {
   .site-header, .site-footer { width: calc(100% - 32px); }
   .site-topbar { min-height: 76px; gap: 12px; flex-wrap: wrap; padding: 14px 0; }
-  .brand-logo { height: 50px; }
+  .brand-mark { height: 36px; width: 36px; }
   .site-brand { font-size: 19px; }
   .site-actions { gap: 9px; }
   .site-actions .site-button { font-size: 12px; padding: 8px 10px; gap: 8px; }

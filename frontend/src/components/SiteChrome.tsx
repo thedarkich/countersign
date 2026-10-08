@@ -29,7 +29,7 @@ export function SiteHeader({ workspace = false, network, mock = false }: { works
     : [['/?section=workflow', tr('How it works', '工作流程')], ['/?section=stack', tr('Building blocks', '核心能力')], ['/inbox', tr('Workspace', '工作台')]]
   return <header className="site-header">
     <div className="site-topbar">
-      <Link to="/" className="site-brand" aria-label={tr('Countersign home', 'Countersign 首页')}><img src="/countersign-logo.png" alt="Countersign" className="brand-logo" /></Link>
+      <Link to="/" className="site-brand" aria-label={tr('Countersign home', 'Countersign 首页')}><img src="/countersign-mark.png" alt="" className="brand-mark" /><span>Countersign</span></Link>
       <div className="site-actions">
         <LangSwitch /><ThemeSwitch />
         {signedIn ? <>
@@ -54,5 +54,5 @@ export function SiteHeader({ workspace = false, network, mock = false }: { works
 
 export function SiteFooter() {
   const { tr } = useLang()
-  return <footer className="site-footer"><Link className="site-brand" to="/"><img src="/countersign-logo.png" alt="Countersign" className="brand-logo" /></Link><span>© 2026 Countersign · {tr('Your rules. Every payment.', '每笔付款，遵循你的规则。')}</span><Link to="/ledger">{tr('View public ledger', '查看公开账本')} →</Link></footer>
+  return <footer className="site-footer"><Link className="site-brand" to="/"><img src="/countersign-mark.png" alt="" className="brand-mark" /><span>Countersign</span></Link><span>© 2026 Countersign · {tr('Your rules. Every payment.', '每笔付款，遵循你的规则。')}</span><Link to="/ledger">{tr('View public ledger', '查看公开账本')} →</Link></footer>
 }
