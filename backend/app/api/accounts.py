@@ -48,7 +48,7 @@ class AccountView(BaseModel):
     id: str
     name: str
     email: str
-    team: bool = True  # may submit invoices that spend the shared vault
+    team: bool = True  # sees Controls, the shared vault's owner page
 
 
 class AccountResponse(BaseModel):

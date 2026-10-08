@@ -12,7 +12,6 @@ from app.api.security import (
     hash_private,
     problem,
     session_user,
-    team_member,
 )
 from app.models import AttemptOwner, SubmissionMeta
 from app.pipeline.ingest import MAX_BYTES, InputError
@@ -32,17 +31,6 @@ def clean_label(value, maximum):
 async def submit(request: Request, *, source):
     runtime = request.app.state.runtime
     bounty = source == "bounty"
-    if (
-        not bounty
-        and not has_admin_token(request)
-        and not team_member(request, session_user(request))
-    ):
-        # team invoices are paid from the shared demo vault
-        raise problem(
-            403,
-            "Only team accounts can submit invoices to the shared demo vault.",
-            "只有团队账户可以向共享演示金库提交发票。",
-        )
     runtime.check_submission(bounty=bounty)
     device = device_id(request, required=bounty)
     try:

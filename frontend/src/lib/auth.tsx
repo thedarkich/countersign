@@ -98,11 +98,11 @@ export function useAuth() {
 }
 
 /** Only workspace routes are valid post-sign-in destinations. */
-/** The Inbox and Controls manage the shared demo vault: only the team token and team accounts see them. */
+/** Controls is the shared vault's owner page: only the team token and team accounts see it. */
 export const onTeam = (user: User | null) => !!getAdminToken() || user?.team !== false
 
 /** Where a page link or sign-in should land: other accounts go to their own wallet instead of a team page. */
-export const landingFor = (user: User | null, path: string) => (!onTeam(user) && /^\/(inbox|controls)/.test(path) ? '/wallet' : path)
+export const landingFor = (user: User | null, path: string) => (!onTeam(user) && /^\/controls/.test(path) ? '/inbox' : path)
 
 export function workspaceDestination(value: string | null) {
   if (!value) return '/inbox'

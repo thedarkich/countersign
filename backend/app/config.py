@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = Field(default=75.0, ge=5, le=180)
     admin_token: SecretStr = Field(default=SecretStr(""), repr=False)
     session_ttl_hours: int = Field(default=168, ge=1, le=720)
-    # comma-separated; when set, only these accounts may submit invoices that spend the shared vault
+    # comma-separated; when set, only these accounts see Controls (the shared vault's owner page)
     team_emails: str = ""
     ip_hash_salt: SecretStr = Field(default=SecretStr(""), repr=False)
     public_base_url: str = "http://localhost:8000"

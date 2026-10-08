@@ -189,7 +189,7 @@ def test_account_submissions_are_rate_limited_but_the_team_token_is_not(accounts
     assert all(client.post("/api/team/attempts", data=INVOICE, headers=ADMIN).status_code == 202 for _ in range(4))
 
 
-def test_only_team_accounts_spend_the_shared_vault_when_a_team_list_is_set(accounts):
+def test_team_list_marks_accounts_but_every_account_may_use_the_inbox(accounts):
     client, runtime = accounts
     runtime.settings.team_emails = " Member@Example.com , lead@example.com "
     assert register(client).json()["user"]["team"] is True
@@ -197,9 +197,8 @@ def test_only_team_accounts_spend_the_shared_vault_when_a_team_list_is_set(accou
     client.post("/api/logout", headers=ORIGIN)
     outsider = register(client, email="visitor@example.com").json()["user"]
     assert outsider["team"] is False and client.get("/api/me").json()["user"]["team"] is False
-    refused = client.post("/api/team/attempts", data=INVOICE, headers=ORIGIN)
-    assert refused.status_code == 403 and "team accounts" in refused.json()["message_en"]
-    assert client.get("/api/wallet").status_code == 200  # the Wallet page stays open to every account
-    assert client.post("/api/team/attempts", data=INVOICE, headers=ADMIN).status_code == 202
-    runtime.settings.team_emails = ""  # unset: every account may submit, as before
+    # the list only hides Controls in the page; invoices and the Wallet stay open to everyone
     assert client.post("/api/team/attempts", data=INVOICE, headers=ORIGIN).status_code == 202
+    assert client.get("/api/wallet").status_code == 200
+    runtime.settings.team_emails = ""  # unset: every account is on the team
+    assert client.get("/api/me").json()["user"]["team"] is True

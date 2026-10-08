@@ -69,7 +69,7 @@ def same_origin(request: Request):
 
 
 def team_member(request: Request, user) -> bool:
-    """With TEAM_EMAILS set, only those accounts may spend the shared demo vault; unset means every account."""
+    """With TEAM_EMAILS set, only those accounts see Controls; unset means every account."""
     listed = request.app.state.runtime.settings.team_emails
     allowed = {email.strip().lower() for email in listed.split(",") if email.strip()}
     return not allowed or (user is not None and user["email"].lower() in allowed)

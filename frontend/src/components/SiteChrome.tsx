@@ -28,7 +28,7 @@ export function SiteHeader({ workspace = false, network, mock = false }: { works
   const links = (workspace
     ? [['/inbox', tr('Inbox', '发票工作台')], ['/wallet', tr('Wallet', '钱包')], ['/ledger', tr('Ledger', '账本')], ['/controls', tr('Controls', '管理控制台')], ['/bounty', tr('Challenge', '挑战防线')]]
     : [['/?section=workflow', tr('How it works', '工作流程')], ['/?section=stack', tr('Building blocks', '核心能力')], [landingFor(user, '/inbox'), tr('Workspace', '工作台')]]
-  ).filter(([to]) => team || !/^\/(inbox|controls)$/.test(to))
+  ).filter(([to]) => team || to !== '/controls')
   return <header className="site-header">
     <div className="site-topbar">
       <Link to="/" className="site-brand" aria-label={tr('Countersign home', 'Countersign 首页')}><img src="/countersign-mark.png" alt="" className="brand-mark" /><span>Countersign</span></Link>
