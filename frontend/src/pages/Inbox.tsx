@@ -3,30 +3,22 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { api, AuthError, clearAdminToken, getAdminToken } from '../api/client'
 import { useAuth } from '../lib/auth'
-import type { AgentKind, Attempt, BatchSummary, DemoInvoice, Source } from '../api/types'
+import type { Attempt, BatchSummary } from '../api/types'
 import { useLang } from '../i18n'
 import { Icon } from '../components/Icon'
 import { Header } from '../components/Header'
-import { Seal, SealMark } from '../components/Seal'
+import { SealMark } from '../components/Seal'
 import { StepRow } from '../components/StepRow'
 import { InvoicePreview } from '../components/InvoicePreview'
 import { Decision } from '../components/Decision'
-import { AdminGate, Address, TxLink } from '../components/bits'
+import { AdminGate, TxLink } from '../components/bits'
 import { attemptMark, isDone, outcomeLabel, outcomeReason, secs, stepMs } from '../lib/attempt'
 import { clock, fmtAmount } from '../lib/format'
 import { flagLabel } from '../lib/reasons'
 import { prepareUpload } from '../lib/upload'
 
-type Target = AgentKind | 'both'
-type Pair = { guarded: string; naive: string; label: string }
-
-/** Sends one invoice (a file or a demo invoice) to one agent or to both. */
-async function sendTo(target: Target, what: { file?: File; demo?: string }) {
-  const one = (agent: AgentKind) => api.submitTeam({ nickname: 'team', agent, ...what }).then((r) => r.attempt_id)
-  if (target !== 'both') return { ids: [await one(target)], pair: null }
-  const [g, n] = await Promise.all([one('guarded'), one('naive')])
-  return { ids: [g, n], pair: { guarded: g, naive: n } }
-}
+/** Every invoice goes through the full check: AI reading, hidden text, registry match and AI review. */
+const submit = (file: File) => api.submitTeam({ nickname: 'team', agent: 'guarded', file }).then((r) => r.attempt_id)
 
 export default function InboxPage() {
   return (
@@ -44,28 +36,18 @@ function Inbox() {
   const { refresh } = useAuth()
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const [target, setTarget] = useState<Target>('both')
-  const [source, setSource] = useState<Source | 'all'>('all')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
-  const [pair, setPair] = useState<Pair | null>(null)
   const [batchId, setBatchId] = useState<string | null>(null)
 
-  const onSent = (ids: string[], p: { guarded: string; naive: string } | null, label: string) => {
+  const onSent = (id: string) => {
     void qc.invalidateQueries({ queryKey: ['team-attempts'] })
-    setSource('all')
-    if (p) {
-      setPair({ ...p, label })
-      setSelected(null)
-    } else if (ids[0]) {
-      setPair(null)
-      setSelected(ids[0])
-    }
+    setSelected(id)
   }
 
   const list = useQuery({
-    queryKey: ['team-attempts', source],
-    queryFn: () => api.teamAttempts(source, 200),
+    queryKey: ['team-attempts', 'all'],
+    queryFn: () => api.teamAttempts('all', 200),
     refetchInterval: (q) => {
       const d = q.state.data as Attempt[] | undefined
       return d?.some((a) => !isDone(a)) ? 1200 : 5000
@@ -100,12 +82,9 @@ function Inbox() {
 
   return (
     <main tabIndex={-1} className="page-content ">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="cond text-[2.4rem] font-extrabold leading-tight">{tr('Inbox', '收件箱')}</h1>
-          <p className="mt-2 text-sm text-ink2">{tr('Read an invoice. Compare the agents. Follow every decision.', '读取发票，对照 Agent，追踪每一步决定。')}</p>
-        </div>
-        <AgentSwitch value={target} onChange={setTarget} />
+      <div>
+        <h1 className="cond text-[2.4rem] font-extrabold leading-tight">{tr('Inbox', '收件箱')}</h1>
+        <p className="mt-2 text-sm text-ink2">{tr('Upload an invoice. Our AI checks it first; then the vault contract on BOT Chain pays it or blocks it.', '上传发票：AI 先检查，再由 BOT Chain 上的金库合约付款或拒付。')}</p>
       </div>
 
       <dl className="metric-grid mt-7">
@@ -117,39 +96,21 @@ function Inbox() {
         ].map(x => <div className="metric-card" key={x.label}><dt>{x.label}<Icon name={x.icon} size={17} /></dt><dd>{list.isLoading ? '—' : x.value}</dd></div>)}
       </dl>
       <Roles />
-      <DemoShelf target={target} onSent={onSent} />
 
       {/* the clean batch spends the shared AI budget, so only the team token runs it */}
-      <div className={`mt-4 grid gap-4 ${getAdminToken() ? 'md:grid-cols-[1fr_20rem]' : ''}`}>
-        <DropZone target={target} onSent={onSent} />
+      <div className={`mt-5 grid gap-4 ${getAdminToken() ? 'md:grid-cols-[1fr_20rem]' : ''}`}>
+        <DropZone onSent={onSent} />
         {getAdminToken() && <BatchBox
           batchId={batchId}
           onStart={async () => {
             const r = await api.runBatch()
             setBatchId(r.batch_id)
-            setSource('all')
           }}
         />}
       </div>
 
-      {pair && <Compare pair={pair} attempts={attempts} symbol={symbol} onOpen={setSelected} onClose={() => setPair(null)} />}
-
       <div className="mt-8 flex flex-wrap items-center justify-between gap-2">
-        <div className="tab-scroll flex gap-1" role="tablist" aria-label={tr('Source', '来源')}>
-          {(
-            [
-              ['all', tr('All', '全部')],
-              ['team', tr('Team', '团队')],
-              ['batch', tr('Clean batch', '正常批次')],
-              ['bounty', tr('Bounty', '挑战')],
-              ['seed', tr('Seed set', '测试样本')],
-            ] as const
-          ).map(([k, label]) => (
-            <button key={k} type="button" role="tab" aria-selected={source === k} onClick={() => setSource(k)} className={`rounded-box px-3 py-1.5 text-[0.95rem] ${source === k ? 'bg-ink text-field' : 'hover:bg-paper2'}`}>
-              {label}
-            </button>
-          ))}
-        </div>
+        <h2 className="cond text-xl font-bold">{tr('Your invoices', '你的发票')}</h2>
         <label className="flex w-full items-center gap-2 rounded-box border border-rule bg-field px-3 py-2 sm:w-64"><Icon name="search" size={16} className="text-ink2" /><input className="min-w-0 w-full bg-transparent text-sm" aria-label={tr('Search invoices', '搜索发票')} placeholder={tr('Search invoices…', '搜索发票…')} value={search} onChange={e => setSearch(e.target.value)} /></label>
       </div>
 
@@ -161,38 +122,17 @@ function Inbox() {
   )
 }
 
-function AgentSwitch({ value, onChange }: { value: Target; onChange: (a: Target) => void }) {
-  const { tr } = useLang()
-  const opts: Array<[Target, string]> = [
-    ['both', tr('Both agents', '两个都发')],
-    ['guarded', tr('Guarded', '带防护')],
-    ['naive', tr('Naive', '裸奔')],
-  ]
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-ink2">{tr('Send to', '发给')}</span>
-      <div className="flex overflow-hidden ruled bg-field" role="radiogroup" aria-label={tr('Send to', '发给')}>
-        {opts.map(([k, label], i) => (
-          <button key={k} type="button" role="radio" aria-checked={value === k} onClick={() => onChange(k)} className={`px-3 py-1.5 text-[0.95rem] ${value === k ? 'bg-ink text-field' : 'hover:bg-paper2'} ${i ? 'border-l border-rule' : ''}`}>
-            {label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 // one column on phones, 2×2 on tablets, one row on wide screens
 const ROLE_BORDERS = ['', 'border-t sm:border-l sm:border-t-0', 'border-t xl:border-l xl:border-t-0', 'border-t sm:border-l xl:border-t-0']
 
-/** The split of responsibility, stated once above the demo: the agent proposes, the contract decides. */
+/** What happens to an uploaded invoice, stated once: the AI checks, the contract decides. */
 function Roles() {
   const { tr } = useLang()
   const steps = [
-    [tr('Invoice arrives', '发票进来'), tr('A PDF, an image or typed text.', 'PDF、图片或一段文字。')],
-    [tr('AI agent proposes', 'AI Agent 提议'), tr('Reads the invoice, flags tricks, and asks the vault to pay. It holds no funds.', '读发票、标出可疑内容，再向金库请求付款。它手里没有钱。')],
-    [tr('Vault contract decides', '金库合约拍板'), tr('Checks the vendor registry, payout address, PO budget, duplicates and the daily cap.', '核对供应商登记、收款地址、采购单预算、重复发票和每日限额。')],
-    [tr('Paid or blocked on chain', '链上付款或拒付'), tr('Either way, the transaction on BOT Chain is the receipt.', '无论结果如何，BOT Chain 上的交易就是回执。')],
+    [tr('You upload an invoice', '你上传发票'), tr('A PDF or an image. It stays private to your account; the file itself never goes on chain.', 'PDF 或图片，只有你的账户能看到。发票文件本身不会上链。')],
+    [tr('Our AI checks it', 'AI 检查发票'), tr('Reads it, looks for hidden text and tricks, and matches it against the vault registry. If anything is wrong, it refuses and nothing goes on chain.', '读取发票、查找隐藏文字和诱导内容，并与金库登记核对。有任何问题就拒绝，不会上链。')],
+    [tr('The contract decides', '合约拍板'), tr('A clean invoice becomes a payment request. The vault contract checks the vendor, payout address, budget, duplicates and daily cap.', '没问题的发票变成付款请求，由金库合约核对供应商、收款地址、预算、重复发票和每日限额。')],
+    [tr('Paid or blocked, on chain', '链上付款或拒付'), tr('The transaction on BOT Chain is the receipt. Open an invoice below to see every check.', 'BOT Chain 上的交易就是回执。点开下方的发票可以看到每一项检查。')],
   ]
   return (
     <ol className="mt-5 grid overflow-hidden ruled bg-field sm:grid-cols-2 xl:grid-cols-4" aria-label={tr('How a payment is decided', '付款如何决定')}>
@@ -207,62 +147,7 @@ function Roles() {
   )
 }
 
-const targetName = (t: Target, tr: (e: string, z: string) => string) =>
-  t === 'both' ? tr('both agents', '两个 Agent') : t === 'guarded' ? tr('the guarded agent', '带防护的 Agent') : tr('the naive agent', '裸奔 Agent')
-
-type OnSent = (ids: string[], pair: { guarded: string; naive: string } | null, label: string) => void
-
-/** The invoices we use on stage, one click each. */
-function DemoShelf({ target, onSent }: { target: Target; onSent: OnSent }) {
-  const { tr, lang } = useLang()
-  const qc = useQueryClient()
-  const q = useQuery({ queryKey: ['demo-invoices'], queryFn: api.demoInvoices, staleTime: 60_000, retry: 1 })
-  const [busy, setBusy] = useState<string | null>(null)
-  const [err, setErr] = useState<string | null>(null)
-  if (!q.data || q.data.length === 0) return null
-  // a clean invoice can be paid once; sending it to both agents would make the second a duplicate
-  const routeFor = (p: DemoInvoice): Target => (p.kind === 'clean' && target === 'both' ? 'guarded' : target)
-
-  async function run(p: DemoInvoice) {
-    setErr(null)
-    setBusy(p.name)
-    try {
-      const r = await sendTo(routeFor(p), { demo: p.name })
-      onSent(r.ids, r.pair, lang === 'zh' ? p.title_zh : p.title_en)
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
-    } finally {
-      setBusy(null)
-      void qc.invalidateQueries({ queryKey: ['demo-invoices'] })
-    }
-  }
-
-  return (
-    <section className="mt-5" aria-label={tr('Demo invoices', '演示发票')}>
-      <h2 className="mb-3 mt-7 text-base font-semibold">{tr('Try a demo scenario', '试试演示场景')}</h2>
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {q.data.map((p) => (
-          <li key={p.name}>
-            <button
-              type="button"
-              onClick={() => void run(p)}
-              disabled={busy !== null}
-              className="flex h-full w-full flex-col items-start rounded-box border border-rule bg-field p-3 text-left hover:border-ink hover:bg-sheet disabled:opacity-60"
-            >
-              <span className={`text-xs font-semibold ${p.kind === 'clean' ? 'text-jade' : 'text-cinnabar'}`}>{p.kind === 'clean' ? tr('clean', '正常') : tr('poisoned', '有毒')}</span>
-              <span className="mt-0.5 font-semibold leading-snug">{lang === 'zh' ? p.title_zh : p.title_en}</span>
-              {(p.note_en || p.note_zh) && <span className="mt-0.5 text-[0.82rem] leading-snug text-ink2">{lang === 'zh' ? p.note_zh : p.note_en}</span>}
-              <span className="mt-auto pt-2 text-sm text-ink2">{busy === p.name ? tr('Sending…', '发送中…') : `${tr('Run on', '发给')} ${targetName(routeFor(p), tr)}`}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      {err && <p role="alert" className="mt-2 text-sm font-semibold text-cinnabar">{err}</p>}
-    </section>
-  )
-}
-
-function DropZone({ target, onSent }: { target: Target; onSent: OnSent }) {
+function DropZone({ onSent }: { onSent: (id: string) => void }) {
   const { tr } = useLang()
   const [over, setOver] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
@@ -271,7 +156,7 @@ function DropZone({ target, onSent }: { target: Target; onSent: OnSent }) {
 
   async function send(files: File[]) {
     setErr(null)
-    let first: { ids: string[]; pair: { guarded: string; naive: string } | null; label: string } | null = null
+    let first: string | null = null
     const skipped: string[] = []
     try {
       for (let i = 0; i < files.length; i++) {
@@ -283,8 +168,8 @@ function DropZone({ target, onSent }: { target: Target; onSent: OnSent }) {
           skipped.push(files[i].name)
           continue
         }
-        const r = await sendTo(target, { file: f })
-        first ??= { ...r, label: f.name }
+        const id = await submit(f)
+        first ??= id
       }
       if (skipped.length) setErr(tr(`Skipped (not a PDF or image, or over 5 MB): ${skipped.join(', ')}`, `已跳过（不是 PDF 或图片，或超过 5 MB）：${skipped.join('、')}`))
     } catch (e) {
@@ -292,7 +177,7 @@ function DropZone({ target, onSent }: { target: Target; onSent: OnSent }) {
     } finally {
       setBusy(null)
       if (input.current) input.current.value = ''
-      if (first) onSent(first.ids, first.pair, first.label)
+      if (first) onSent(first)
     }
   }
 
@@ -312,80 +197,11 @@ function DropZone({ target, onSent }: { target: Target; onSent: OnSent }) {
     >
       <input ref={input} type="file" multiple accept=".pdf,.png,.jpg,.jpeg" className="sr-only" onChange={(e) => void send(Array.from(e.target.files ?? []))} />
       <p className="cond text-xl font-bold">{busy ?? tr('Drop invoices here', '把发票拖到这里')}</p>
-      <p className="mt-1 text-sm text-ink2">
-        {tr('PDF, PNG or JPG, several at a time. They go to ', 'PDF、PNG 或 JPG，可以一次拖多张，会发给')}
-        <strong>{targetName(target, tr)}</strong>
-        {tr('.', '。')}
-      </p>
+      <p className="mt-1 text-sm text-ink2">{tr('PDF, PNG or JPG, several at a time. Each one goes through the full AI check before anything reaches the chain.', 'PDF、PNG 或 JPG，可以一次拖多张。每张都会先经过完整的 AI 检查，才会上链。')}</p>
       <button type="button" className="btn btn-line mt-3 py-1.5" onClick={() => input.current?.click()} disabled={!!busy}>
         {tr('Choose files', '选择文件')}
       </button>
       {err && <p role="alert" className="mt-2 text-sm font-semibold text-cinnabar">{err}</p>}
-    </div>
-  )
-}
-
-/** The same invoice through both agents, next to each other. This is the stage moment. */
-function Compare({ pair, attempts, symbol, onOpen, onClose }: { pair: Pair; attempts: Attempt[]; symbol: string; onOpen: (id: string) => void; onClose: () => void }) {
-  const { tr } = useLang()
-  const g = attempts.find((a) => a.id === pair.guarded)
-  const n = attempts.find((a) => a.id === pair.naive)
-  return (
-    <section className="mt-6 ruled-strong bg-field" aria-label={tr('Both agents', '两个 Agent')}>
-      <div className="flex items-baseline justify-between gap-3 border-b-[1.5px] border-rule2 px-4 py-3">
-        <h2 className="cond min-w-0 truncate text-2xl font-bold">{pair.label}</h2>
-        <button type="button" onClick={onClose} className="shrink-0 rounded-box px-2 py-1 text-ink2 hover:bg-paper2" aria-label={tr('Close', '关闭')}>
-          ✕
-        </button>
-      </div>
-      <div className="grid md:grid-cols-2">
-        <CompareSide agent="guarded" attempt={g} symbol={symbol} onOpen={onOpen} />
-        <div className="border-t border-rule md:border-l md:border-t-0">
-          <CompareSide agent="naive" attempt={n} symbol={symbol} onOpen={onOpen} />
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function CompareSide({ agent, attempt: a, symbol, onOpen }: { agent: AgentKind; attempt?: Attempt; symbol: string; onOpen: (id: string) => void }) {
-  const { t, tr, lang } = useLang()
-  const done = !!a && isDone(a)
-  const kind = done ? attemptMark(a!) : null
-  const p = a?.proposal
-  const mismatch = !!p?.pay_to && !!p?.registry_payout && p.pay_to.toLowerCase() !== p.registry_payout.toLowerCase()
-  const top = a?.flags.find((f) => f.severity === 'high') ?? a?.flags[0]
-  return (
-    <div className="p-4">
-      <p className="cond text-xl font-bold">{agent === 'guarded' ? t.agent_guarded : t.agent_naive}</p>
-      <p className="mb-3 text-sm text-ink2">{agent === 'guarded' ? t.agent_guarded_hint : t.agent_naive_hint}</p>
-      {a ? <StepRow steps={a.steps} /> : <div className="h-24 animate-pulse rounded-box bg-paper2" />}
-      {done && a && kind && (
-        <div className="mt-4 grid grid-cols-[auto_1fr] items-center gap-4">
-          {kind === 'paid' || kind === 'blocked' || kind === 'refused' || kind === 'no_invoice' || kind === 'error' ? <Seal kind={kind} size={104} /> : null}
-          <div className="min-w-0">
-            <p className="cond text-[1.7rem] font-extrabold leading-tight" style={{ color: kind === 'paid' ? 'var(--jade)' : kind === 'blocked' ? 'var(--cinnabar)' : 'var(--ink)' }}>
-              {outcomeLabel(a, t)}
-            </p>
-            {outcomeReason(a, lang) && <p className="font-semibold">{outcomeReason(a, lang)}</p>}
-            {a.outcome === 'refused' && top && <p className="text-sm leading-snug text-ink2">{lang === 'zh' ? top.detail_zh : top.detail_en}</p>}
-            {p?.pay_to && (
-              <p className="mt-1 text-sm">
-                {tr('Asked to pay ', '要求付到 ')}
-                <Address value={p.pay_to} className={mismatch || !p.registry_payout ? 'text-cinnabar' : 'text-jade'} />
-                {mismatch && <span className="text-ink2">{tr(', registered is ', '，登记的是 ')}<Address value={p.registry_payout} /></span>}
-              </p>
-            )}
-            <p className="mt-2 flex flex-wrap gap-x-4 text-sm">
-              {a.tx && <TxLink href={a.tx.explorer_url} hash={a.tx.hash} label={t.view_tx} />}
-              <button type="button" className="underline decoration-rule underline-offset-4 hover:decoration-ink" onClick={() => onOpen(a.id)}>
-                {tr('Details', '详情')}
-              </button>
-            </p>
-          </div>
-        </div>
-      )}
-      {a && <div className="mt-4"><Decision attempt={a} symbol={symbol} /></div>}
     </div>
   )
 }
@@ -445,15 +261,12 @@ function AttemptsTable({ attempts, loading, selected, onSelect, symbol, compact 
   const { t, tr, lang } = useLang()
   if (loading) return <div className="h-64 animate-pulse rounded-box bg-paper2" aria-hidden />
   if (attempts.length === 0) return <p className="py-8 text-ink2">{tr('Nothing yet. Drop an invoice above.', '还没有记录。把发票拖到上面。')}</p>
-  const src = (s: Source) => ({ team: tr('Team', '团队'), batch: tr('Batch', '批次'), bounty: tr('Bounty', '挑战'), seed: tr('Seed', '样本') })[s]
   return (
     <div className="min-w-0 self-start overflow-x-auto ruled bg-field">
-      <table className={`w-full border-collapse text-left text-[0.93rem] ${compact ? 'min-w-[34rem]' : 'min-w-[44rem]'}`}>
+      <table className={`w-full border-collapse text-left text-[0.93rem] ${compact ? 'min-w-[34rem]' : 'min-w-[40rem]'}`}>
         <thead>
           <tr className="rule-b bg-paper text-[0.84rem] text-rule2">
             <th className="px-3 py-2 font-normal">{t.col_time}</th>
-            {!compact && <th className="px-3 py-2 font-normal">{tr('Source', '来源')}</th>}
-            {!compact && <th className="px-3 py-2 font-normal">{t.col_agent}</th>}
             <th className="px-3 py-2 font-normal">{tr('File', '文件')}</th>
             <th className="px-3 py-2 font-normal">{t.col_event}</th>
             <th className="px-3 py-2 font-normal">{t.col_reason}</th>
@@ -475,8 +288,6 @@ function AttemptsTable({ attempts, loading, selected, onSelect, symbol, compact 
                 className={`rule-b cursor-pointer last:border-b-0 ${active ? 'bg-sheet shadow-[inset_3px_0_0_var(--ink)]' : 'hover:bg-sheet'}`}
               >
                 <td className="num px-3 py-2 font-mono text-[0.83rem] text-ink2">{clock(a.created_at)}</td>
-                {!compact && <td className="px-3 py-2 text-ink2">{src(a.source)}</td>}
-                {!compact && <td className="px-3 py-2">{a.agent === 'guarded' ? tr('Guarded', '带防护') : tr('Naive', '裸奔')}</td>}
                 <td className="max-w-[12rem] truncate px-3 py-2 font-mono text-[0.83rem]" title={a.file_name ?? ''}>
                   {a.file_name ?? <span className="font-sans text-ink2">{tr('message', '文字')}</span>}
                 </td>
