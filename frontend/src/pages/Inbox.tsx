@@ -122,10 +122,10 @@ function Inbox() {
         <label className="flex w-full items-center gap-2 rounded-box border border-rule bg-field px-3 py-2 sm:w-64"><Icon name="search" size={16} className="text-ink2" /><input className="min-w-0 w-full bg-transparent text-sm" aria-label={tr('Search invoices', '搜索发票')} placeholder={tr('Search invoices…', '搜索发票…')} value={search} onChange={e => setSearch(e.target.value)} /></label>
       </div>
 
-      <div className={`mt-3 grid gap-5 ${current ? 'lg:grid-cols-[minmax(0,1fr)_34rem]' : ''}`}>
-        <AttemptsTable attempts={search ? shown : attempts} loading={list.isLoading} selected={selected} onSelect={setSelected} symbol={symbol} compact={!!current} />
-        {current && <Drawer attempt={current} symbol={symbol} onClose={() => setSelected(null)} />}
+      <div className="mt-3">
+        <AttemptsTable attempts={search ? shown : attempts} loading={list.isLoading} selected={selected} onSelect={setSelected} symbol={symbol} compact={false} />
       </div>
+      {current && <InvoiceModal attempt={current} symbol={symbol} onClose={() => setSelected(null)} />}
     </main>
   )
 }
@@ -326,7 +326,7 @@ function AttemptsTable({ attempts, loading, selected, onSelect, symbol, compact 
   )
 }
 
-function Drawer({ attempt, symbol, onClose }: { attempt: Attempt; symbol: string; onClose: () => void }) {
+function InvoiceModal({ attempt, symbol, onClose }: { attempt: Attempt; symbol: string; onClose: () => void }) {
   const { t, tr, lang } = useLang()
   const [showHidden, setShowHidden] = useState(true)
   const a = attempt
@@ -335,6 +335,19 @@ function Drawer({ attempt, symbol, onClose }: { attempt: Attempt; symbol: string
   const ms = stepMs(a)
   const hiddenCount = a.hidden_text?.spans.length ?? 0
   const mismatch = !!p?.pay_to && !!p?.registry_payout && p.pay_to.toLowerCase() !== p.registry_payout.toLowerCase()
+
+  const dialog = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    // the list stays mounted underneath, so its search and scroll position survive closing
+    const before = document.activeElement as HTMLElement | null
+    const overflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    dialog.current?.focus()
+    return () => {
+      document.body.style.overflow = overflow
+      before?.focus?.({ preventScroll: true })
+    }
+  }, [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -346,11 +359,8 @@ function Drawer({ attempt, symbol, onClose }: { attempt: Attempt; symbol: string
   const mark = attemptMark(a)
 
   return (
-    <aside
-      className="fixed inset-0 z-30 overflow-y-auto bg-paper p-2 lg:sticky lg:inset-auto lg:top-4 lg:z-auto lg:max-h-[calc(100dvh-2rem)] lg:self-start lg:bg-transparent lg:p-0"
-      aria-label={tr('Attempt detail', '详情')}
-    >
-      <div className="ruled-strong bg-field">
+    <div className="fixed inset-0 z-40 flex justify-center bg-[rgba(0,0,0,0.55)] sm:items-center sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div ref={dialog} role="dialog" aria-modal="true" aria-label={tr('Invoice detail', '发票详情')} tabIndex={-1} className="flex h-full w-full flex-col overflow-hidden bg-field outline-none sm:h-auto sm:max-h-[92dvh] sm:max-w-6xl sm:rounded-box sm:border-[1.5px] sm:border-rule2">
         <div className="flex items-start justify-between gap-3 border-b-[1.5px] border-rule2 px-4 py-3">
           <div className="min-w-0">
             <p className="truncate font-mono text-sm" title={a.file_name ?? ''}>
@@ -362,142 +372,146 @@ function Drawer({ attempt, symbol, onClose }: { attempt: Attempt; symbol: string
               {a.nickname && a.source === 'bounty' ? `, ${a.nickname}` : ''}
             </p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-box px-2 py-1 text-ink2 hover:bg-paper2" aria-label={tr('Close', '关闭')}>
+          <button type="button" onClick={onClose} className="shrink-0 rounded-box px-2 py-1 text-lg text-ink2 hover:bg-paper2" aria-label={tr('Close', '关闭')}>
             ✕
           </button>
         </div>
 
-        <div className="space-y-5 p-4">
-          <StepRow steps={a.steps} />
-          <p className="num -mt-3 text-xs text-ink2">
-            {a.steps
-              .filter((s) => ms[s.name] != null)
-              .map((s) => `${stepName(s.name)} ${secs(ms[s.name])}`)
-              .join(lang === 'zh' ? '，' : ', ')}
-          </p>
+        <div className="grid flex-1 content-start gap-6 overflow-y-auto p-4 lg:grid-cols-2 lg:p-6">
+          <div className="min-w-0 space-y-5">
+            <StepRow steps={a.steps} />
+            <p className="num -mt-3 text-xs text-ink2">
+              {a.steps
+                .filter((s) => ms[s.name] != null)
+                .map((s) => `${stepName(s.name)} ${secs(ms[s.name])}`)
+                .join(lang === 'zh' ? '，' : ', ')}
+            </p>
 
-          {isDone(a) && (
-            <div className="flex items-center gap-3">
-              <SealMark kind={mark} size={40} />
-              <div>
-                <p className="cond text-2xl font-bold leading-tight" style={{ color: mark === 'paid' ? 'var(--jade)' : mark === 'blocked' ? 'var(--cinnabar)' : 'var(--ink)' }}>
-                  {outcomeLabel(a, t)}
-                </p>
-                {outcomeReason(a, lang) && <p className="text-[0.95rem]">{outcomeReason(a, lang)}</p>}
+            {isDone(a) && (
+              <div className="flex items-center gap-3">
+                <SealMark kind={mark} size={40} />
+                <div>
+                  <p className="cond text-2xl font-bold leading-tight" style={{ color: mark === 'paid' ? 'var(--jade)' : mark === 'blocked' ? 'var(--cinnabar)' : 'var(--ink)' }}>
+                    {outcomeLabel(a, t)}
+                  </p>
+                  {outcomeReason(a, lang) && <p className="text-[0.95rem]">{outcomeReason(a, lang)}</p>}
+                </div>
+                {a.tx && (
+                  <span className="ml-auto text-sm">
+                    <TxLink href={a.tx.explorer_url} hash={a.tx.hash} label={t.view_tx} />
+                  </span>
+                )}
               </div>
-              {a.tx && (
-                <span className="ml-auto text-sm">
-                  <TxLink href={a.tx.explorer_url} hash={a.tx.hash} label={t.view_tx} />
-                </span>
-              )}
-            </div>
-          )}
+            )}
 
-          <Decision attempt={a} symbol={symbol} />
+            <Decision attempt={a} symbol={symbol} />
 
-          <Section
-            title={tr('The file', '原件')}
-            right={
-              hiddenCount > 0 ? (
-                <label className="flex cursor-pointer items-center gap-1.5 text-sm">
-                  <input type="checkbox" checked={showHidden} onChange={(e) => setShowHidden(e.target.checked)} className="accent-[var(--cinnabar)]" />
-                  {tr('Show hidden text', '显示隐藏文字')}
-                </label>
-              ) : null
-            }
-          >
-            <InvoicePreview attempt={a} showHidden={showHidden} />
-          </Section>
-
-          {a.hidden_text && (
-            <Section title={tr('Hidden text', '隐藏文字')}>
-              {hiddenCount === 0 ? (
-                <p className="text-sm text-ink2">{tr('None. Everything in the file is visible.', '没有，文件里的字都看得见。')}</p>
-              ) : (
-                <ul className="space-y-2">
-                  {a.hidden_text.spans.map((s, i) => (
-                    <li key={i} className="border-l-2 border-cinnabar pl-2.5 text-sm">
-                      <span className="text-xs text-ink2">
-                        {
-                          {
-                            near_white: tr('near-white text', '接近白色的文字'),
-                            tiny_font: tr('tiny font', '极小字号'),
-                            off_page: tr('outside the page', '在页面外'),
-                            zero_area: tr('zero-size box', '零面积文本框'),
-                          }[s.reason]
-                        }
-                        , {tr('page', '第')} {s.page}
-                        {lang === 'zh' ? ' 页' : ''}
+            {a.flags.length > 0 && (
+              <Section title={t.flags_title}>
+                <ul className="space-y-1.5">
+                  {a.flags.map((f) => (
+                    <li key={f.code} className="flex gap-2 text-sm leading-snug">
+                      <span className="mt-[0.4rem] h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: f.severity === 'high' ? 'var(--cinnabar)' : 'var(--ink-2)' }} aria-hidden />
+                      <span>
+                        <strong>{flagLabel(f.code, lang)}.</strong> {lang === 'zh' ? f.detail_zh : f.detail_en}
                       </span>
-                      <span className="block break-words font-mono text-[0.83rem]">{s.text}</span>
                     </li>
                   ))}
                 </ul>
-              )}
-            </Section>
-          )}
+              </Section>
+            )}
 
-          {x && x.is_invoice && (
-            <Section title={tr('Read from the invoice', '识别出的字段')}>
-              <dl className="grid grid-cols-[8rem_1fr] overflow-hidden ruled text-sm">
-                <Field k={tr('Vendor', '销售方')} v={x.vendor_name} />
-                <Field k={tr('Invoice no.', '发票号码')} v={x.invoice_number} mono />
-                <Field k={tr('Date / due', '开票 / 到期')} v={[x.invoice_date, x.due_date].filter(Boolean).join(' / ') || null} />
-                <Field k={tr('Amount', '金额')} v={x.amount_total != null ? `${fmtAmount(x.amount_total)} ${x.currency ?? ''}` : null} mono />
-                <Field k={tr('PO', '采购单')} v={x.po_reference} mono />
-                <Field k={tr('Pay to (printed)', '收款地址（发票上）')} v={x.payee_address} mono />
-                <Field k={tr('Notes', '备注')} v={x.notes_to_payer} last />
-              </dl>
-            </Section>
-          )}
-
-          {a.flags.length > 0 && (
-            <Section title={t.flags_title}>
-              <ul className="space-y-1.5">
-                {a.flags.map((f) => (
-                  <li key={f.code} className="flex gap-2 text-sm leading-snug">
-                    <span className="mt-[0.4rem] h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: f.severity === 'high' ? 'var(--cinnabar)' : 'var(--ink-2)' }} aria-hidden />
-                    <span>
-                      <strong>{flagLabel(f.code, lang)}.</strong> {lang === 'zh' ? f.detail_zh : f.detail_en}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          )}
-
-          {p && (
-            <Section title={tr('Proposed payment', '提出的付款')}>
-              <div className="grid grid-cols-2 overflow-hidden ruled text-sm">
-                <div className="border-r border-rule p-3">
-                  <p className="text-xs text-rule2">{tr('Agent asked to pay', 'Agent 要求付到')}</p>
-                  <p className={`mt-1 break-all font-mono text-[0.8rem] ${mismatch ? 'font-semibold text-cinnabar' : ''}`}>{p.pay_to ?? '—'}</p>
+            {p && (
+              <Section title={tr('Proposed payment', '提出的付款')}>
+                <div className="grid grid-cols-2 overflow-hidden ruled text-sm">
+                  <div className="border-r border-rule p-3">
+                    <p className="text-xs text-rule2">{tr('Agent asked to pay', 'Agent 要求付到')}</p>
+                    <p className={`mt-1 break-all font-mono text-[0.8rem] ${mismatch ? 'font-semibold text-cinnabar' : ''}`}>{p.pay_to ?? '—'}</p>
+                  </div>
+                  <div className="p-3">
+                    <p className="text-xs text-rule2">{tr('Registry payout', '登记的收款地址')}</p>
+                    <p className={`mt-1 break-all font-mono text-[0.8rem] ${p.registry_payout && !mismatch ? 'text-jade' : ''}`}>{p.registry_payout ?? tr('no such vendor', '没有这个供应商')}</p>
+                  </div>
+                  <p className={`col-span-2 border-t border-rule px-3 py-2 text-[0.85rem] ${mismatch || !p.registry_payout ? 'text-cinnabar' : 'text-jade'}`}>
+                    {!p.registry_payout
+                      ? tr("This vendor isn't registered, so the vault won't pay it.", '这个供应商没有登记，金库不会付。')
+                      : mismatch
+                        ? tr('Different addresses. The vault only pays the registered one.', '地址不一样，金库只会付到登记的那个。')
+                        : tr('Same address.', '地址一致。')}
+                  </p>
                 </div>
-                <div className="p-3">
-                  <p className="text-xs text-rule2">{tr('Registry payout', '登记的收款地址')}</p>
-                  <p className={`mt-1 break-all font-mono text-[0.8rem] ${p.registry_payout && !mismatch ? 'text-jade' : ''}`}>{p.registry_payout ?? tr('no such vendor', '没有这个供应商')}</p>
-                </div>
-                <p className={`col-span-2 border-t border-rule px-3 py-2 text-[0.85rem] ${mismatch || !p.registry_payout ? 'text-cinnabar' : 'text-jade'}`}>
-                  {!p.registry_payout
-                    ? tr("This vendor isn't registered, so the vault won't pay it.", '这个供应商没有登记，金库不会付。')
-                    : mismatch
-                      ? tr('Different addresses. The vault only pays the registered one.', '地址不一样，金库只会付到登记的那个。')
-                      : tr('Same address.', '地址一致。')}
-                </p>
-              </div>
-              <dl className="mt-2 grid grid-cols-[8rem_1fr] overflow-hidden ruled text-sm">
-                <Field k={tr('Vendor', '供应商')} v={p.vendor_id ? `#${p.vendor_id} ${p.vendor_name ?? ''}` : p.vendor_name} />
-                <Field k={tr('Budget', '预算')} v={p.po_ref ?? (p.po_id ? `#${p.po_id}` : null)} mono />
-                <Field k={tr('Amount', '金额')} v={p.amount ? `${fmtAmount(p.amount)} ${symbol}` : null} mono />
-                <Field k={tr('Invoice hash', '发票哈希')} v={p.invoice_hash} mono last />
-              </dl>
-            </Section>
-          )}
+                <dl className="mt-2 grid grid-cols-[8rem_1fr] overflow-hidden ruled text-sm">
+                  <Field k={tr('Vendor', '供应商')} v={p.vendor_id ? `#${p.vendor_id} ${p.vendor_name ?? ''}` : p.vendor_name} />
+                  <Field k={tr('Budget', '预算')} v={p.po_ref ?? (p.po_id ? `#${p.po_id}` : null)} mono />
+                  <Field k={tr('Amount', '金额')} v={p.amount ? `${fmtAmount(p.amount)} ${symbol}` : null} mono />
+                  <Field k={tr('Invoice hash', '发票哈希')} v={p.invoice_hash} mono last />
+                </dl>
+              </Section>
+            )}
 
-          <p className="font-mono text-xs text-ink2">id {a.id}</p>
+          </div>
+          <div className="min-w-0 space-y-5">
+            <Section
+              title={tr('The file', '原件')}
+              right={
+                hiddenCount > 0 ? (
+                  <label className="flex cursor-pointer items-center gap-1.5 text-sm">
+                    <input type="checkbox" checked={showHidden} onChange={(e) => setShowHidden(e.target.checked)} className="accent-[var(--cinnabar)]" />
+                    {tr('Show hidden text', '显示隐藏文字')}
+                  </label>
+                ) : null
+              }
+            >
+              <InvoicePreview attempt={a} showHidden={showHidden} />
+            </Section>
+
+            {a.hidden_text && (
+              <Section title={tr('Hidden text', '隐藏文字')}>
+                {hiddenCount === 0 ? (
+                  <p className="text-sm text-ink2">{tr('None. Everything in the file is visible.', '没有，文件里的字都看得见。')}</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {a.hidden_text.spans.map((s, i) => (
+                      <li key={i} className="border-l-2 border-cinnabar pl-2.5 text-sm">
+                        <span className="text-xs text-ink2">
+                          {
+                            {
+                              near_white: tr('near-white text', '接近白色的文字'),
+                              tiny_font: tr('tiny font', '极小字号'),
+                              off_page: tr('outside the page', '在页面外'),
+                              zero_area: tr('zero-size box', '零面积文本框'),
+                            }[s.reason]
+                          }
+                          , {tr('page', '第')} {s.page}
+                          {lang === 'zh' ? ' 页' : ''}
+                        </span>
+                        <span className="block break-words font-mono text-[0.83rem]">{s.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Section>
+            )}
+
+            {x && x.is_invoice && (
+              <Section title={tr('Read from the invoice', '识别出的字段')}>
+                <dl className="grid grid-cols-[8rem_1fr] overflow-hidden ruled text-sm">
+                  <Field k={tr('Vendor', '销售方')} v={x.vendor_name} />
+                  <Field k={tr('Invoice no.', '发票号码')} v={x.invoice_number} mono />
+                  <Field k={tr('Date / due', '开票 / 到期')} v={[x.invoice_date, x.due_date].filter(Boolean).join(' / ') || null} />
+                  <Field k={tr('Amount', '金额')} v={x.amount_total != null ? `${fmtAmount(x.amount_total)} ${x.currency ?? ''}` : null} mono />
+                  <Field k={tr('PO', '采购单')} v={x.po_reference} mono />
+                  <Field k={tr('Pay to (printed)', '收款地址（发票上）')} v={x.payee_address} mono />
+                  <Field k={tr('Notes', '备注')} v={x.notes_to_payer} last />
+                </dl>
+              </Section>
+            )}
+
+            <p className="font-mono text-xs text-ink2">id {a.id}</p>
+          </div>
         </div>
       </div>
-    </aside>
+    </div>
   )
 }
 
