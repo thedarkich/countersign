@@ -1,13 +1,16 @@
 """Pay from your own wallet: proof of control, whitelist with a waiting period, own maximum, verified receipts."""
 
+import time as real_time
 from types import SimpleNamespace
 
 import pytest
 from eth_account import Account
 from eth_account.messages import encode_defunct
+from sqlmodel import Session, select
 from test_accounts import MEMBER, ORIGIN, register, system
 
 import app.api.wallet as wallet_api
+from app.models import WalletLink, WalletPayment
 
 PAYEE = "0x419D0c4F429981b45548724404E5a2CeFcB303d0"
 OTHER = "0x3135Ee6Aa8e71E2e51E56314f23c7a96c72DF47b"
@@ -28,7 +31,7 @@ class FakeChain:
 @pytest.fixture
 def member(tmp_path, monkeypatch):
     client, runtime = system(tmp_path)
-    clock = [1_800_000_000]
+    clock = [int(real_time.time())]  # payments carry real creation times, so start the clock there
     monkeypatch.setattr(wallet_api, "time", SimpleNamespace(time=lambda: clock[0]))
     with client:
         assert register(client).status_code == 201
@@ -200,10 +203,13 @@ def test_sent_transaction_is_checked_against_the_approval(member):
     fake.receipts[HASH] = {"status": 1, "block_number": 123}
     history = client.get("/api/wallet/payments").json()["payments"]
     assert history[0]["status"] == "confirmed" and history[0]["block_number"] == 123
-    # an approval is single use, and a hash can be recorded once
+    # an approval holds one transaction, and a hash can belong to one payment only
+    other_hash = "0x" + "ef" * 32
     assert (
         client.post(
-            f"/api/wallet/payments/{payment['id']}/sent", json={"tx_hash": HASH}, headers=ORIGIN
+            f"/api/wallet/payments/{payment['id']}/sent",
+            json={"tx_hash": other_hash},
+            headers=ORIGIN,
         ).status_code
         == 409
     )
@@ -265,3 +271,103 @@ def test_accounts_never_see_each_other(member, tmp_path):
     assert approve(client, payee["id"], "0.05").status_code in {404, 409}
     assert client.get("/api/wallet/payments").json()["payments"] == []
     assert MEMBER["email"] != "other@example.com"
+
+
+def sent(client, payment_id, tx_hash):
+    return client.post(
+        f"/api/wallet/payments/{payment_id}/sent", json={"tx_hash": tx_hash}, headers=ORIGIN
+    )
+
+
+def test_reporting_is_idempotent_so_a_lost_report_never_needs_a_second_payment(member):
+    """Review finding 1: the wallet sent, but the report never arrived or its response was lost."""
+    client, clock = member
+    key, payee = ready(client, clock)
+    fake = client.app.state.wallet_chain
+    # the report never reached the server: the approval is still open, reporting later works
+    payment = approve(client, payee["id"], "0.05").json()["payment"]
+    clock[0] += 601  # even after the approval window, within a day
+    assert sent(client, payment["id"], HASH).json()["payment"]["status"] == "sent"
+    # the server saved it but the response was lost: the same report again is accepted
+    again = sent(client, payment["id"], HASH)
+    assert again.status_code == 200 and again.json()["payment"]["id"] == payment["id"]
+    fake.txs[HASH] = {"from": key.address, "to": PAYEE, "value": 5 * 10**16}
+    fake.receipts[HASH] = {"status": 1, "block_number": 9}
+    assert sent(client, payment["id"], HASH).json()["payment"]["status"] == "confirmed"
+    assert len(client.get("/api/wallet/payments").json()["payments"]) == 1
+    # a stale approval cannot be reused a day later
+    stale = approve(client, payee["id"], "0.05").json()["payment"]
+    clock[0] += 600 + 86401
+    assert sent(client, stale["id"], "0x" + "12" * 32).status_code == 409
+
+
+def test_cancelled_approvals_never_hide_sent_payments(member):
+    """Review finding 3: 50 newer unsent approvals pushed the history out of view."""
+    client, clock = member
+    _, payee = ready(client, clock)
+    for n in range(6):
+        payment = approve(client, payee["id"], "0.01").json()["payment"]
+        sent(client, payment["id"], "0x" + f"{n:02x}" * 32)
+    with Session(client.app.state.runtime.store.engine) as session:
+        user_id = session.exec(select(WalletLink.user_id)).one()
+        for _ in range(50):  # newer approvals whose wallet prompt was cancelled
+            session.add(
+                WalletPayment(
+                    user_id=user_id,
+                    chain_id=677,
+                    wallet=PAYEE,
+                    payee=PAYEE,
+                    payee_label="x",
+                    amount_wei="1",
+                    expires_at=clock[0] + 600,
+                )
+            )
+        session.commit()
+    assert len(client.get("/api/wallet/payments").json()["payments"]) == 6
+
+
+def test_old_pending_payments_are_rechecked_and_unknown_ones_expire(member):
+    """Review finding 4: five never-mined hashes starved an older confirmed one."""
+    client, clock = member
+    key, payee = ready(client, clock)
+    fake = client.app.state.wallet_chain
+    hashes = ["0x" + f"{n + 16:02x}" * 32 for n in range(6)]
+    for tx_hash in hashes:
+        payment = approve(client, payee["id"], "0.01").json()["payment"]
+        sent(client, payment["id"], tx_hash)
+    oldest = hashes[0]
+    fake.txs[oldest] = {"from": key.address, "to": PAYEE, "value": 10**16}
+    fake.receipts[oldest] = {"status": 1, "block_number": 5}
+    by_hash = {p["tx_hash"]: p for p in client.get("/api/wallet/payments").json()["payments"]}
+    assert by_hash[oldest]["status"] == "confirmed"
+    assert {by_hash[h]["status"] for h in hashes[1:]} == {"sent"}
+    clock[0] += 1801
+    by_hash = {p["tx_hash"]: p for p in client.get("/api/wallet/payments").json()["payments"]}
+    assert {by_hash[h]["status"] for h in hashes[1:]} == {"failed"}
+    assert by_hash[hashes[1]]["detail"] == "Not found on chain 30 minutes after approval."
+
+
+def test_amounts_must_be_plain_decimals(member):
+    """Review finding 6: 1e-9999999 underflowed to zero and was accepted."""
+    client, _ = member
+    for bad in (
+        "1e-9999999",
+        "1e2",
+        "0.5e1",
+        "-0.1",
+        "0",
+        "0.0",
+        "abc",
+        "1,5",
+        "",
+        "12345678",
+        "0.0000000000000000001",
+        "inf",
+        "NaN",
+    ):
+        assert (
+            client.put("/api/wallet/limit", json={"max": bad or " "}, headers=ORIGIN).status_code
+            == 422
+        ), bad
+    one_wei = client.put("/api/wallet/limit", json={"max": "0.000000000000000001"}, headers=ORIGIN)
+    assert one_wei.status_code == 200 and one_wei.json()["max"] == "0.000000000000000001"

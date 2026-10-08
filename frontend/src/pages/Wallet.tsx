@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatEther, isAddress } from 'viem'
@@ -6,6 +6,7 @@ import { api } from '../api/client'
 import { useAuth } from '../lib/auth'
 import { isRejection, rpcBalance, useDiscoveredWallets, useInjectedWallet, type DiscoveredWallet, type InjectedWallet } from '../lib/injectedWallet'
 import { walletApi, WalletApiError, type WalletOverview, type WalletPayee, type WalletPayment } from '../lib/walletApi'
+import { browserStore, payOnce, record, type PendingReport } from '../lib/walletSend'
 import { useLang } from '../i18n'
 import { Header } from '../components/Header'
 import { Address } from '../components/bits'
@@ -271,31 +272,75 @@ function SendCard({ data, wallet, now, say }: { data: WalletOverview; wallet: In
   const [stage, setStage] = useState<Stage>(null)
   const [err, setErr] = useState<string | null>(null)
   const [last, setLast] = useState<WalletPayment | null>(null)
+  const store = useMemo(() => browserStore(), [])
   const linked = data.wallet?.address
+  const mine = (r: PendingReport) => !!linked && r.wallet.toLowerCase() === linked.toLowerCase()
+  // payments the wallet already sent but Countersign has not recorded yet (failed report or a refresh)
+  const [unrecorded, setUnrecorded] = useState<PendingReport[]>(() => store.load().filter(mine))
+  const [recording, setRecording] = useState(false)
   const ready = !!linked && wallet.address?.toLowerCase() === linked.toLowerCase()
   const selected: WalletPayee | undefined = data.payees.find(p => p.id === payeeId)
+
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ['wallet-payments'] })
+    void qc.invalidateQueries({ queryKey: ['wallet-balance'] })
+  }
+
+  /** Report the kept hashes again. Never sends: the money already moved. */
+  async function recordAll(list = store.load().filter(mine)) {
+    setRecording(true)
+    try {
+      for (const report of list) {
+        try {
+          setLast(await record(store, report, walletApi.sent))
+        } catch (e) {
+          setErr(say(e))
+        }
+      }
+    } finally {
+      setUnrecorded(store.load().filter(mine))
+      setRecording(false)
+      refresh()
+    }
+  }
+
+  // after a refresh, finish reporting anything left from the last visit
+  useEffect(() => {
+    const left = store.load().filter(mine)
+    setUnrecorded(left)
+    if (left.length) void recordAll(left)
+  }, [linked]) // only when the linked wallet changes
 
   async function send() {
     setErr(null)
     setLast(null)
     setStage('approve')
     try {
-      const { payment, tx } = await walletApi.approve(payeeId, amount.trim())
-      if (wallet.chainId !== tx.chain_id) {
-        setStage('switch')
-        await wallet.ensureChain(tx.chain_id)
-      }
-      setStage('sign')
-      const hash = await wallet.send({ to: tx.to, value: tx.value })
-      setStage('report')
-      setLast((await walletApi.sent(payment.id, hash)).payment)
-      setAmount('')
+      const result = await payOnce({
+        approve: () => walletApi.approve(payeeId, amount.trim()),
+        send: async (tx) => {
+          if (wallet.chainId !== tx.chain_id) {
+            setStage('switch')
+            await wallet.ensureChain(tx.chain_id)
+          }
+          setStage('sign')
+          return wallet.send({ to: tx.to, value: tx.value })
+        },
+        sent: walletApi.sent,
+        store,
+        onReporting: () => {
+          setStage('report')
+          setAmount('') // the money moved: never leave the form ready to send it again
+        },
+      })
+      if (result.status === 'recorded') setLast(result.payment)
+      else setErr(tr('Your wallet sent this payment, but Countersign could not record it yet. Do not pay again: use “Record it now” below.', '钱包已经发出这笔付款，但 Countersign 还没能记录。请不要重复付款，点击下方的“立即记录”。'))
     } catch (e) {
       setErr(say(e))
     } finally {
       setStage(null)
-      void qc.invalidateQueries({ queryKey: ['wallet-payments'] })
-      void qc.invalidateQueries({ queryKey: ['wallet-balance'] })
+      setUnrecorded(store.load().filter(mine))
+      refresh()
     }
   }
 
@@ -320,12 +365,28 @@ function SendCard({ data, wallet, now, say }: { data: WalletOverview; wallet: In
           <input className="field num" inputMode="decimal" placeholder={data.limit ? tr(`up to ${data.limit.max}`, `最多 ${data.limit.max}`) : '0.01'} value={amount} onChange={e => setAmount(e.target.value)} aria-label={tr('Amount in BOT', '金额（BOT）')} />
           <span className="self-center text-sm text-ink2">BOT</span>
         </div>
-        <button type="submit" className="btn btn-ink py-2" disabled={!!stage || !ready || !selected || !amount.trim()}>
+        <button type="submit" className="btn btn-ink py-2" disabled={!!stage || recording || unrecorded.length > 0 || !ready || !selected || !amount.trim()}>
           {stage ? label[stage] : tr('Send with my wallet', '用我的钱包发送')}
         </button>
         {!ready && <p className="text-xs text-ink2">{tr('Connect and link your wallet first (step 1).', '请先连接并链接钱包（第 1 步）。')}</p>}
+        {unrecorded.length > 0 && <p className="text-xs text-ink2">{tr('Record the payment below before sending another one.', '请先记录下面这笔付款，再发起新的付款。')}</p>}
       </form>
       <Problem text={err} />
+      {unrecorded.map(r => (
+        <div key={r.paymentId} role="status" className="mt-3 rounded-box border border-cinnabar p-2.5 text-sm">
+          <p className="font-semibold">{tr('Sent from your wallet, not recorded by Countersign yet', '钱包已发出，Countersign 尚未记录')}</p>
+          <p className="mt-0.5">
+            <strong className="num">{r.amount} BOT</strong> → {r.label} <Address value={r.payee} />
+          </p>
+          <p className="mt-0.5 text-ink2">{tr('This payment is already on chain. Do not send it again.', '这笔付款已经在链上，请不要再次发送。')}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <button type="button" className="btn btn-ink py-1.5" disabled={recording} onClick={() => void recordAll([r])}>
+              {recording ? tr('Recording…', '记录中…') : tr('Record it now', '立即记录')}
+            </button>
+            <a className="underline decoration-rule underline-offset-4 hover:decoration-ink" href={`${data.explorer_url}/tx/${r.hash}`} target="_blank" rel="noreferrer">{tr('See it on the explorer', '在浏览器中查看')}</a>
+          </div>
+        </div>
+      ))}
       {last && <PaymentLine payment={last} />}
     </Card>
   )

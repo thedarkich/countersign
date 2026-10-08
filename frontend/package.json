@@ -9,7 +9,8 @@
     "build:mock": "tsc -b && vite build --mode mock",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
-    "abi": "node scripts/abi.mjs"
+    "abi": "node scripts/abi.mjs",
+    "test:wallet": "esbuild scripts/wallet-send.test.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/wallet-send.test.mjs && node --test node_modules/.cache/wallet-send.test.mjs"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",

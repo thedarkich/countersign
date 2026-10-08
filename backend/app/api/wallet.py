@@ -12,7 +12,7 @@ import secrets
 import time
 import unicodedata
 from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from eth_account import Account
 from eth_account.messages import encode_defunct
@@ -37,6 +37,9 @@ APPROVAL_SECONDS = 600
 CHALLENGE_SECONDS = 300
 MAX_PAYEES = 100
 TX_HASH = re.compile(r"^0x[0-9a-fA-F]{64}$")
+AMOUNT = re.compile(r"\d{1,7}(\.\d{1,18})?")
+REPORT_GRACE = 86400  # a hash may still be reported for a day after its approval expired
+NOT_FOUND_AFTER = 1800  # a sent payment never seen on chain this long after approval is failed
 
 
 def account(request: Request):
@@ -120,17 +123,19 @@ def network(request: Request):
     return name, CHAIN_IDS[name], explorer.rstrip("/")
 
 
-def to_wei(value: str, *, allow_zero=False) -> int:
-    try:
-        amount = Decimal(value.strip())
-    except InvalidOperation:
-        raise problem(422, "Enter an amount like 0.05.", "请输入金额，例如 0.05。") from None
-    if not amount.is_finite() or amount < 0 or (amount == 0 and not allow_zero) or amount > MAX_BOT:
+def to_wei(value: str) -> int:
+    # Plain decimals only: exponents such as 1e-9999999 underflow to zero inside Decimal arithmetic.
+    text = value.strip()
+    if not AMOUNT.fullmatch(text):
+        raise problem(
+            422,
+            "Enter an amount like 0.05, with at most 18 decimals.",
+            "请输入金额，例如 0.05，最多 18 位小数。",
+        )
+    wei = int(Decimal(text) * WEI)  # at most 25 significant digits, exact within Decimal's 28
+    if not 0 < wei <= int(MAX_BOT * WEI):
         raise problem(422, "Enter an amount above zero.", "请输入大于零的金额。")
-    wei = amount * WEI
-    if wei != wei.to_integral_value():
-        raise problem(422, "Use at most 18 decimal places.", "最多 18 位小数。")
-    return int(wei)
+    return wei
 
 
 def bot(wei: int | str | None) -> str | None:
@@ -189,6 +194,13 @@ async def verify(request: Request, payment: WalletPayment):
     try:
         tx = await asyncio.wait_for(asyncio.to_thread(lookup.transaction, payment.tx_hash), 15)
         if tx is None:
+            # never seen on chain long after approval: dropped or never broadcast, so stop rechecking it
+            approved = datetime.fromisoformat(payment.created_at).timestamp()
+            if time.time() - approved > NOT_FOUND_AFTER:
+                payment.status, payment.detail = (
+                    "failed",
+                    "Not found on chain 30 minutes after approval.",
+                )
             return
         differs = [
             name
@@ -459,15 +471,33 @@ async def payment_sent(request: Request, payment_id: str, body: SentInput):
     if not TX_HASH.match(body.tx_hash):
         raise problem(422, "Invalid transaction hash.", "交易哈希无效。")
     _, _, explorer = network(request)
+    tx_hash = body.tx_hash.lower()
     with Session(request.app.state.runtime.store.engine) as session:
         payment = session.get(WalletPayment, payment_id)
         if payment is None or payment.user_id != user["id"]:
             raise problem(404, "Payment not found.", "找不到这笔付款。")
-        if payment.status != "approved" or payment.expires_at < int(time.time()):
+        if payment.tx_hash:
+            # Reporting is idempotent: a retry after a lost response reports the same hash again.
+            if payment.tx_hash != tx_hash:
+                raise problem(
+                    409,
+                    "This payment already has a different transaction.",
+                    "这笔付款已经记录了另一笔交易。",
+                )
+            if payment.status == "sent":
+                await verify(request, payment)
+                session.add(payment)
+                session.commit()
+                session.refresh(payment)
+            return {"payment": payment_view(payment, explorer)}
+        # the wallet may have sent just before the approval expired and reported it after a refresh
+        if payment.status not in {"approved", "expired"} or payment.expires_at + REPORT_GRACE < int(
+            time.time()
+        ):
             raise problem(
                 409, "This approval was already used or expired.", "该付款批准已使用或已过期。"
             )
-        payment.tx_hash, payment.status = body.tx_hash.lower(), "sent"
+        payment.tx_hash, payment.status = tx_hash, "sent"
         session.add(payment)
         try:
             session.commit()
@@ -487,26 +517,25 @@ async def payment_sent(request: Request, payment_id: str, body: SentInput):
 async def payments(request: Request):
     user = session_user(request)
     _, _, explorer = network(request)
-    now = int(time.time())
+    mine = WalletPayment.user_id == user["id"]
     with Session(request.app.state.runtime.store.engine) as session:
-        rows = (
-            session.execute(
-                select(WalletPayment)
-                .where(WalletPayment.user_id == user["id"])
-                .order_by(WalletPayment.created_at.desc())
-                .limit(50)
-            )
-            .scalars()
-            .all()
-        )
-        checked = 0
-        for payment in rows:
-            if payment.status == "approved" and payment.expires_at < now:
-                payment.status = "expired"
-                session.add(payment)
-            elif payment.status == "sent" and checked < 5:
-                checked += 1
-                await verify(request, payment)
-                session.add(payment)
+        # Oldest first, so a few never-mined hashes cannot starve older payments; each of them
+        # leaves this set once confirmed, failed or not found for NOT_FOUND_AFTER seconds.
+        pending = session.execute(
+            select(WalletPayment)
+            .where(mine, WalletPayment.status == "sent")
+            .order_by(WalletPayment.created_at)
+            .limit(5)
+        ).scalars()
+        for payment in pending:
+            await verify(request, payment)
+            session.add(payment)
         session.commit()
-        return {"payments": [payment_view(p, explorer) for p in rows if p.tx_hash]}
+        # Only sent payments are history; unsent approvals (a cancelled wallet prompt) never hide it.
+        rows = session.execute(
+            select(WalletPayment)
+            .where(mine, WalletPayment.tx_hash.is_not(None))
+            .order_by(WalletPayment.created_at.desc())
+            .limit(50)
+        ).scalars()
+        return {"payments": [payment_view(p, explorer) for p in rows]}
