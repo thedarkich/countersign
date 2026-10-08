@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { api, clearAdminToken } from '../api/client'
+import { api, clearAdminToken, getAdminToken } from '../api/client'
 import { useLang } from '../i18n'
 import { getDeviceId } from './device'
 
@@ -98,6 +98,12 @@ export function useAuth() {
 }
 
 /** Only workspace routes are valid post-sign-in destinations. */
+/** The Inbox and Controls manage the shared demo vault: only the team token and team accounts see them. */
+export const onTeam = (user: User | null) => !!getAdminToken() || user?.team !== false
+
+/** Where a page link or sign-in should land: other accounts go to their own wallet instead of a team page. */
+export const landingFor = (user: User | null, path: string) => (!onTeam(user) && /^\/(inbox|controls)/.test(path) ? '/wallet' : path)
+
 export function workspaceDestination(value: string | null) {
   if (!value) return '/inbox'
   return /^\/(inbox|ledger|controls|bounty)(?:\?[^#]*)?$/.test(value) ? value : '/inbox'

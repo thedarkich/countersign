@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, LockKeyhole } from 'lucide-react'
 import { api, getAdminToken } from '../api/client'
 import { useLang } from '../i18n'
-import { authRequest, useAuth, workspaceDestination } from '../lib/auth'
+import { authRequest, landingFor, useAuth, workspaceDestination } from '../lib/auth'
 import { SiteHeader, SiteFooter } from '../components/SiteChrome'
 
 export default function AuthPage({ register = false }: { register?: boolean }) {
@@ -26,7 +26,7 @@ export default function AuthPage({ register = false }: { register?: boolean }) {
     document.title = (register ? tr('Create account', '创建账户') : tr('Sign in', '登录')) + ' · Countersign'
     window.scrollTo(0, 0)
   }, [register, location.pathname, tr])
-  if (user || getAdminToken()) return <Navigate to={next} replace />
+  if (user || getAdminToken()) return <Navigate to={landingFor(user, next)} replace />
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (busy) return

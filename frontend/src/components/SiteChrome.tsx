@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { clearAdminToken, getAdminToken } from '../api/client'
-import { useAuth } from '../lib/auth'
+import { landingFor, onTeam, useAuth } from '../lib/auth'
 import { useLang } from '../i18n'
 import { LangSwitch, ThemeSwitch } from './Toggles'
 
@@ -24,9 +24,11 @@ export function SiteHeader({ workspace = false, network, mock = false }: { works
     } catch { setError(tr('Could not sign out. Please retry.', '退出未完成，请重试。')) }
     finally { setBusy(false) }
   }
-  const links = workspace
+  const team = onTeam(user)
+  const links = (workspace
     ? [['/inbox', tr('Inbox', '发票工作台')], ['/wallet', tr('Wallet', '钱包')], ['/ledger', tr('Ledger', '账本')], ['/controls', tr('Controls', '管理控制台')], ['/bounty', tr('Challenge', '挑战防线')]]
-    : [['/?section=workflow', tr('How it works', '工作流程')], ['/?section=stack', tr('Building blocks', '核心能力')], ['/inbox', tr('Workspace', '工作台')]]
+    : [['/?section=workflow', tr('How it works', '工作流程')], ['/?section=stack', tr('Building blocks', '核心能力')], [landingFor(user, '/inbox'), tr('Workspace', '工作台')]]
+  ).filter(([to]) => team || !/^\/(inbox|controls)$/.test(to))
   return <header className="site-header">
     <div className="site-topbar">
       <Link to="/" className="site-brand" aria-label={tr('Countersign home', 'Countersign 首页')}><img src="/countersign-mark.png" alt="" className="brand-mark" /><span>Countersign</span></Link>
@@ -35,7 +37,7 @@ export function SiteHeader({ workspace = false, network, mock = false }: { works
         {signedIn ? <>
           <span className="account-label" title={user?.email}>{user ? user.name : tr('Team token', '团队令牌')}</span>
           {workspace ? <button type="button" className="site-button secondary" disabled={busy} onClick={() => void signOut()}>{busy ? tr('Signing out…', '正在退出…') : tr('Sign out', '退出登录')}</button>
-            : <Link className="site-button" to="/inbox">{tr('Open workspace', '进入工作台')} <span aria-hidden>→</span></Link>}
+            : <Link className="site-button" to={landingFor(user, '/inbox')}>{tr('Open workspace', '进入工作台')} <span aria-hidden>→</span></Link>}
         </> : <>
           <Link className="site-signin" to="/login">{tr('Sign in', '登录')}</Link>
           <Link className="site-button" to="/signup">{tr('Get started', '开始使用')} <span aria-hidden>→</span></Link>

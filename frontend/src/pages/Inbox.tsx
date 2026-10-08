@@ -11,7 +11,7 @@ import { SealMark } from '../components/Seal'
 import { StepRow } from '../components/StepRow'
 import { InvoicePreview } from '../components/InvoicePreview'
 import { Decision } from '../components/Decision'
-import { AdminGate, TxLink } from '../components/bits'
+import { AdminGate, TeamGate, TxLink } from '../components/bits'
 import { attemptMark, isDone, outcomeLabel, outcomeReason, secs, stepMs } from '../lib/attempt'
 import { clock, fmtAmount } from '../lib/format'
 import { flagLabel } from '../lib/reasons'
@@ -25,7 +25,9 @@ export default function InboxPage() {
     <div className="workspace">
       <Header />
       <AdminGate>
-        <Inbox />
+        <TeamGate>
+          <Inbox />
+        </TeamGate>
       </AdminGate>
     </div>
   )

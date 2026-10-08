@@ -10,7 +10,7 @@ import type { AppConfig, ChangeKind, PendingChange, Registry } from '../api/type
 import { useLang } from '../i18n'
 import { Icon } from '../components/Icon'
 import { Header } from '../components/Header'
-import { AdminGate, Address, Countdown, TxLink } from '../components/bits'
+import { AdminGate, Address, Countdown, TeamGate, TxLink } from '../components/bits'
 import { countersignAbi } from '../abi/Countersign'
 import { wagmiConfig } from '../lib/wagmi'
 import { CHANGE_LABEL, changeAddress, describeChange } from '../lib/changes'
@@ -106,6 +106,7 @@ export default function ControlsPage() {
     <div className="workspace">
       <Header />
       <AdminGate>
+        <TeamGate>
         {!config.data ? (
           <div className="mx-auto mt-10 h-40 max-w-6xl animate-pulse rounded-box bg-paper2" />
         ) : api.mode === 'mock' ? (
@@ -115,6 +116,7 @@ export default function ControlsPage() {
             <LiveControls config={config.data} />
           </WagmiProvider>
         )}
+        </TeamGate>
       </AdminGate>
     </div>
   )

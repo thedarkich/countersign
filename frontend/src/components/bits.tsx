@@ -2,8 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { shortAddr } from '../lib/format'
 import { useLang } from '../i18n'
 import { getAdminToken } from '../api/client'
-import { useAuth } from '../lib/auth'
-import { Navigate, useLocation } from 'react-router-dom'
+import { onTeam, useAuth } from '../lib/auth'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import type { EvalResults } from '../api/types'
 
 export function Address({ value, lead = 6, tail = 4, className = '' }: { value?: string | null; lead?: number; tail?: number; className?: string }) {
@@ -67,6 +67,20 @@ export function AdminGate({ children }: { children: ReactNode }) {
   if (user || getAdminToken()) return <>{children}</>
   if (loading) return <div className="session-state" role="status">{tr('Checking your session…', '正在检查登录状态…')}</div>
   return <Navigate to={'/login?next=' + encodeURIComponent(location.pathname)} replace />
+}
+
+/** Team pages (Inbox, Controls) manage the shared demo vault; other accounts are pointed to their own wallet. */
+export function TeamGate({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
+  const { tr } = useLang()
+  if (onTeam(user)) return <>{children}</>
+  return (
+    <div className="mx-auto mt-16 max-w-md px-4 text-center">
+      <p className="cond text-2xl font-bold">{tr('This page is for the Countersign team.', '此页面仅供 Countersign 团队使用。')}</p>
+      <p className="mt-2 text-sm text-ink2">{tr('It manages the shared demo vault. You can pay from your own wallet on the Wallet page.', '它用于管理共享演示金库。你可以在“钱包”页面用自己的钱包付款。')}</p>
+      <Link className="btn btn-ink mt-4 inline-block" to="/wallet">{tr('Open my wallet', '打开我的钱包')}</Link>
+    </div>
+  )
 }
 
 /** Guard v1 vs v2 on held-out attacks. Renders nothing until results exist. */

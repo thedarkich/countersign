@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useLang } from '../i18n'
 import { SiteHeader, SiteFooter } from '../components/SiteChrome'
 import { api, getAdminToken } from '../api/client'
-import { useAuth } from '../lib/auth'
+import { landingFor, useAuth } from '../lib/auth'
 import '../landing.css'
 
 /** Fades `.reveal` elements in as they scroll into view, then hands them back to their own styles (hover lifts, transitions). */
@@ -58,8 +58,8 @@ export default function LandingPage() {
   const note = api.mode === 'mock' ? tr('Mock data · Nothing is sent on-chain', '模拟数据 · 不发送链上交易') : network === 'testnet' ? tr('BOT Chain testnet · Test tokens only', 'BOT Chain 测试网 · 仅使用测试代币') : network === 'mainnet' ? tr('BOT Chain mainnet', 'BOT Chain 主网') : ''
   const { user } = useAuth()
   const signedIn = !!user || !!getAdminToken()
-  const workspace = signedIn ? '/inbox' : '/login'
-  const start = signedIn ? '/inbox' : '/signup'
+  const workspace = signedIn ? landingFor(user, '/inbox') : '/login'
+  const start = signedIn ? landingFor(user, '/inbox') : '/signup'
   const [params] = useSearchParams()
   const [demo, setDemo] = useState<'request' | 'rules' | 'receipt'>('request')
   const [copied, setCopied] = useState(false)
