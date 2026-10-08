@@ -5,6 +5,11 @@
     header {
         X-Content-Type-Options nosniff
         Referrer-Policy no-referrer
+        # no other site may frame these pages (clickjacking on Controls and Wallet)
+        X-Frame-Options DENY
+        Content-Security-Policy "frame-ancestors 'none'"
+        # HTTPS only; one day, no subdomains, so it is easy to undo
+        Strict-Transport-Security "max-age=86400"
         -Server
     }
     reverse_proxy api:8000
