@@ -61,8 +61,18 @@ def session_user(request: Request):
 def same_origin(request: Request):
     """Cookie-authorized writes must come from this site (SameSite=Strict is the first line)."""
     origin = urlparse(request.headers.get("origin", ""))
-    allowed = {request.url.netloc, urlparse(request.app.state.runtime.settings.public_base_url).netloc}
+    allowed = {
+        request.url.netloc,
+        urlparse(request.app.state.runtime.settings.public_base_url).netloc,
+    }
     return origin.scheme in {"http", "https"} and origin.netloc in allowed - {""}
+
+
+def team_member(request: Request, user) -> bool:
+    """With TEAM_EMAILS set, only those accounts may spend the shared demo vault; unset means every account."""
+    listed = request.app.state.runtime.settings.team_emails
+    allowed = {email.strip().lower() for email in listed.split(",") if email.strip()}
+    return not allowed or (user is not None and user["email"].lower() in allowed)
 
 
 def is_admin(request: Request):
@@ -109,11 +119,15 @@ def device_id(request: Request, *, required=False):
 
 def can_read_private(request, attempt):
     device = device_id(request)
-    return has_admin_token(request) or owns_attempt(request, attempt.id) or bool(
-        attempt.source == "bounty"
-        and attempt.device_id
-        and device
-        and hmac.compare_digest(attempt.device_id, device)
+    return (
+        has_admin_token(request)
+        or owns_attempt(request, attempt.id)
+        or bool(
+            attempt.source == "bounty"
+            and attempt.device_id
+            and device
+            and hmac.compare_digest(attempt.device_id, device)
+        )
     )
 
 

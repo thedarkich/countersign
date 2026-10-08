@@ -4,7 +4,7 @@ import { api, clearAdminToken } from '../api/client'
 import { useLang } from '../i18n'
 import { getDeviceId } from './device'
 
-export interface User { id: string; name: string; email: string }
+export interface User { id: string; name: string; email: string; team?: boolean } // team: may spend the shared vault
 type AuthResult = { response: { ok: boolean; status: number }; result: { user?: User } }
 type Auth = {
   user: User | null; loading: boolean; error: string

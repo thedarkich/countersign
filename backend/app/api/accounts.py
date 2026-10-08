@@ -18,7 +18,14 @@ from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
-from app.api.security import SESSION_COOKIE, hash_private, problem, session_digest, session_user
+from app.api.security import (
+    SESSION_COOKIE,
+    hash_private,
+    problem,
+    session_digest,
+    session_user,
+    team_member,
+)
 from app.models import RateBucket, UserAccount, UserSession
 
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -41,6 +48,7 @@ class AccountView(BaseModel):
     id: str
     name: str
     email: str
+    team: bool = True  # may submit invoices that spend the shared vault
 
 
 class AccountResponse(BaseModel):
@@ -58,7 +66,13 @@ def verify_password(stored: str, password: str) -> bool:
         kind, n, r, p, salt, digest = stored.split("$")
         if kind != "scrypt":
             return False
-        params = {"n": int(n), "r": int(r), "p": int(p), "dklen": len(digest) // 2, "maxmem": SCRYPT["maxmem"]}
+        params = {
+            "n": int(n),
+            "r": int(r),
+            "p": int(p),
+            "dklen": len(digest) // 2,
+            "maxmem": SCRYPT["maxmem"],
+        }
         actual = hashlib.scrypt(password.encode(), salt=bytes.fromhex(salt), **params)
     except ValueError:
         return False
@@ -97,11 +111,15 @@ def throttle(request: Request, limits):
             for scope, identity, seconds, limit in limits:
                 key = f"{scope}:{now // seconds}:{hash_private(identity, salt)}"
                 count = (
-                    conn.execute(select(RateBucket.count).where(RateBucket.key == key)).scalar_one_or_none()
+                    conn.execute(
+                        select(RateBucket.count).where(RateBucket.key == key)
+                    ).scalar_one_or_none()
                     or 0
                 )
                 if count >= limit:
-                    raise problem(429, "Too many attempts. Wait and try again.", "尝试过于频繁，请稍后再试。")
+                    raise problem(
+                        429, "Too many attempts. Wait and try again.", "尝试过于频繁，请稍后再试。"
+                    )
                 conn.execute(
                     insert(RateBucket)
                     .values(key=key, count=count + 1, expires_at=(now // seconds + 1) * seconds)
@@ -122,7 +140,9 @@ def end_session(request: Request):
     token = request.cookies.get(SESSION_COOKIE, "")
     if token:
         with Session(request.app.state.runtime.store.engine) as session:
-            session.execute(delete(UserSession).where(UserSession.token_hash == session_digest(token)))
+            session.execute(
+                delete(UserSession).where(UserSession.token_hash == session_digest(token))
+            )
             session.commit()
 
 
@@ -134,7 +154,9 @@ def start_session(request: Request, response: Response, user_id: str):
     now = int(time.time())
     with Session(request.app.state.runtime.store.engine) as session:
         session.execute(delete(UserSession).where(UserSession.expires_at <= now))
-        session.add(UserSession(token_hash=session_digest(token), user_id=user_id, expires_at=now + ttl))
+        session.add(
+            UserSession(token_hash=session_digest(token), user_id=user_id, expires_at=now + ttl)
+        )
         session.commit()
     response.set_cookie(
         SESSION_COOKIE,
@@ -149,7 +171,13 @@ def start_session(request: Request, response: Response, user_id: str):
 
 @router.post("/register", status_code=201, response_model=AccountResponse)
 async def register(request: Request, response: Response, body: Registration):
-    throttle(request, [("register-global", "global", 60, 20), *device_limits(request, "register-device", 3600, 10)])
+    throttle(
+        request,
+        [
+            ("register-global", "global", 60, 20),
+            *device_limits(request, "register-device", 3600, 10),
+        ],
+    )
     email, name = normalize_email(body.email), clean_name(body.name)
     password_hash = await asyncio.to_thread(hash_password, body.password)
     account = UserAccount(email=email, name=name, password_hash=password_hash)
@@ -158,8 +186,17 @@ async def register(request: Request, response: Response, body: Registration):
         try:
             session.commit()
         except IntegrityError:
-            raise problem(409, "This email already has an account. Sign in instead.", "该邮箱已注册，请直接登录。") from None
-        view = AccountView(id=account.id, name=account.name, email=account.email)
+            raise problem(
+                409,
+                "This email already has an account. Sign in instead.",
+                "该邮箱已注册，请直接登录。",
+            ) from None
+        view = AccountView(
+            id=account.id,
+            name=account.name,
+            email=account.email,
+            team=team_member(request, {"email": account.email}),
+        )
     start_session(request, response, view.id)
     return {"user": view}
 
@@ -176,9 +213,20 @@ async def login(request: Request, response: Response, body: Credentials):
         ],
     )
     with Session(request.app.state.runtime.store.engine) as session:
-        account = session.execute(select(UserAccount).where(UserAccount.email == email)).scalar_one_or_none()
+        account = session.execute(
+            select(UserAccount).where(UserAccount.email == email)
+        ).scalar_one_or_none()
         stored = account.password_hash if account else UNKNOWN_ACCOUNT
-        view = AccountView(id=account.id, name=account.name, email=account.email) if account else None
+        view = (
+            AccountView(
+                id=account.id,
+                name=account.name,
+                email=account.email,
+                team=team_member(request, {"email": account.email}),
+            )
+            if account
+            else None
+        )
     if not await asyncio.to_thread(verify_password, stored, body.password) or view is None:
         raise problem(401, "Email or password is incorrect.", "邮箱或密码不正确。")
     start_session(request, response, view.id)
@@ -190,7 +238,11 @@ async def logout(request: Request, response: Response):
     end_session(request)
     settings = request.app.state.runtime.settings
     response.delete_cookie(
-        SESSION_COOKIE, path="/", httponly=True, samesite="strict", secure=settings.public_base_url.startswith("https://")
+        SESSION_COOKIE,
+        path="/",
+        httponly=True,
+        samesite="strict",
+        secure=settings.public_base_url.startswith("https://"),
     )
     return {"ok": True}
 
@@ -200,4 +252,4 @@ async def me(request: Request):
     user = session_user(request)
     if user is None:
         raise problem(401, "Not signed in.", "尚未登录。")
-    return {"user": user}
+    return {"user": {**user, "team": team_member(request, user)}}

@@ -64,7 +64,7 @@ def test_open_registration_starts_a_session(accounts):
     created = register(client)
     assert created.status_code == 201
     user = created.json()["user"]  # the shape the sign-in page reads
-    assert user == {"id": user["id"], "name": "Test Member", "email": "member@example.com"}
+    assert user == {"id": user["id"], "name": "Test Member", "email": "member@example.com", "team": True}
     cookie = created.headers["set-cookie"].lower()
     assert "httponly" in cookie and "samesite=strict" in cookie and "path=/" in cookie
     assert client.get("/api/me").json() == {"user": user}
@@ -187,3 +187,19 @@ def test_account_submissions_are_rate_limited_but_the_team_token_is_not(accounts
     assert codes == [202, 202, 202, 429]
     client.cookies.clear()
     assert all(client.post("/api/team/attempts", data=INVOICE, headers=ADMIN).status_code == 202 for _ in range(4))
+
+
+def test_only_team_accounts_spend_the_shared_vault_when_a_team_list_is_set(accounts):
+    client, runtime = accounts
+    runtime.settings.team_emails = " Member@Example.com , lead@example.com "
+    assert register(client).json()["user"]["team"] is True
+    assert client.post("/api/team/attempts", data=INVOICE, headers=ORIGIN).status_code == 202
+    client.post("/api/logout", headers=ORIGIN)
+    outsider = register(client, email="visitor@example.com").json()["user"]
+    assert outsider["team"] is False and client.get("/api/me").json()["user"]["team"] is False
+    refused = client.post("/api/team/attempts", data=INVOICE, headers=ORIGIN)
+    assert refused.status_code == 403 and "team accounts" in refused.json()["message_en"]
+    assert client.get("/api/wallet").status_code == 200  # the Wallet page stays open to every account
+    assert client.post("/api/team/attempts", data=INVOICE, headers=ADMIN).status_code == 202
+    runtime.settings.team_emails = ""  # unset: every account may submit, as before
+    assert client.post("/api/team/attempts", data=INVOICE, headers=ORIGIN).status_code == 202

@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { WagmiProvider, useAccount, useConnect, useDisconnect, useSwitchChain, useWriteContract } from 'wagmi'
+import { WagmiProvider, useAccount, useBalance, useConnect, useDisconnect, useReadContract, useSwitchChain, useWriteContract } from 'wagmi'
 import { getAccount, waitForTransactionReceipt } from 'wagmi/actions'
 import { WalletScreeningBadge } from '../components/WalletScreening'
 import { ReputationBadge } from '../components/Reputation'
-import { parseUnits, type Abi, type Address as Addr, type Hex } from 'viem'
+import { erc20Abi, formatUnits, parseUnits, type Abi, type Address as Addr, type Hex } from 'viem'
 import { api } from '../api/client'
 import type { AppConfig, ChangeKind, PendingChange, Registry } from '../api/types'
 import { useLang } from '../i18n'
@@ -174,6 +174,7 @@ function LiveControls({ config }: { config: AppConfig }) {
             <span className="text-sm text-ink2">{tr('Wallet', '钱包')}</span>
             <Address value={account.address} lead={8} tail={6} />
             <span className="text-sm text-ink2">{account.chain?.name ?? `chain ${account.chainId}`}</span>
+            {rightChain && account.address && <WalletBalances address={account.address} config={config} />}
             <button type="button" className="ml-auto text-sm text-ink2 underline underline-offset-4" onClick={() => disconnect()}>
               {tr('Disconnect', '断开')}
             </button>
@@ -213,6 +214,40 @@ function LiveControls({ config }: { config: AppConfig }) {
   )
 
   return <Controls config={config} signer={{ act, canSend: account.isConnected && rightChain, isOwner }} banner={banner} />
+}
+
+/** The connected person's own balances: what is in their wallet, not in the shared vault. */
+function WalletBalances({ address, config }: { address: Addr; config: AppConfig }) {
+  const { tr } = useLang()
+  const chainId = config.chain_id as 677 | 968
+  const native = useBalance({ address, chainId, query: { refetchInterval: 15_000 } })
+  const isToken = !/^0x0{40}$/i.test(config.token.address)
+  const token = useReadContract({
+    address: config.token.address as Addr,
+    abi: erc20Abi,
+    functionName: 'balanceOf',
+    args: [address],
+    chainId,
+    query: { enabled: isToken, refetchInterval: 15_000 },
+  })
+  const fmt = (v: bigint | undefined, decimals: number) =>
+    v === undefined ? '—' : Number(formatUnits(v, decimals)).toLocaleString(undefined, { maximumFractionDigits: 4 })
+  return (
+    <span className="text-sm">
+      {tr('Your wallet', '你的钱包')}:{' '}
+      {isToken && (
+        <>
+          <strong className="num">
+            {fmt(token.data as bigint | undefined, config.token.decimals)} {config.token.symbol}
+          </strong>
+          {' · '}
+        </>
+      )}
+      <span className="num">
+        {fmt(native.data?.value, 18)} {native.data?.symbol ?? 'BOT'}
+      </span>
+    </span>
+  )
 }
 
 // ---------- the panels ----------
@@ -290,10 +325,12 @@ function Controls({ config, signer, banner }: { config: AppConfig; signer: Signe
           {/* status */}
           <section aria-label={tr("Vault overview", "金库概览")}><div className="metric-grid">
             <Figure label={tr('Payments', '付款')} value={r.paused ? tr('Paused', '已暂停') : tr('Running', '正常')} color={r.paused ? 'var(--cinnabar)' : 'var(--jade)'} />
-            <Figure label={tr('In the vault', '金库余额')} value={fmtAmount(r.vault_balance)} unit={symbol} />
+            <Figure label={tr('Shared vault (contract)', '共享金库（合约）')} value={fmtAmount(r.vault_balance)} unit={symbol} />
             <Figure label={tr('Daily cap', '每日限额')} value={fmtAmount(r.daily_cap)} unit={symbol} />
             <Figure label={tr('Left today', '今日剩余')} value={fmtAmount(r.remaining_today)} unit={symbol} />
-            </div><div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-box border border-rule bg-field px-5 py-4">
+            </div>
+            <p className="mt-2 text-sm text-ink2">{tr('The shared vault is a contract on BOT Chain. Its balance is not anyone’s MetaMask: it can only pay registered vendors, within their budgets and the daily cap. Your own balance is shown next to your wallet above.', '共享金库是 BOT Chain 上的一个合约，它的余额不属于任何人的 MetaMask：只能在预算和每日限额内付给已登记的供应商。你自己的余额显示在上方的钱包旁边。')}</p>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-box border border-rule bg-field px-5 py-4">
               <p className="flex items-center gap-2 text-sm text-ink2"><Icon name="shield" size={18} />{tr('Owner controls · restrictions take effect immediately', '所有者控制 · 收紧权限立即生效')}</p>
               {r.paused ? (
                 <button type="button" className="btn btn-line whitespace-nowrap" disabled={!owner || busy !== null || unpausePending} onClick={() => run('unpause', { type: 'queue', kind: 'Unpause', decoded: {} })}>
@@ -754,7 +791,7 @@ function Withdraw({ reg, owner, busy, run, waitText, symbol }: PanelProps & { sy
   return (
     <Panel title={tr('Withdraw', '提取')} note={tr('Only to the owner address.', '只能提到所有者地址。')}>
       <div className="px-4 py-3">
-        <p className="text-sm text-ink2">{tr('In the vault', '金库余额')}</p>
+        <p className="text-sm text-ink2">{tr('In the shared vault', '共享金库余额')}</p>
         <p className="num cond-x text-[2rem] font-bold leading-none">
           {fmtAmount(reg.vault_balance)} <span className="text-sm font-semibold">{symbol}</span>
         </p>

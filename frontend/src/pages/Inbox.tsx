@@ -33,7 +33,9 @@ export default function InboxPage() {
 
 function Inbox() {
   const { tr } = useLang()
-  const { refresh } = useAuth()
+  const { refresh, user } = useAuth()
+  // invoices are paid from the shared demo vault, so uploading is for team accounts
+  const canUpload = !!getAdminToken() || user?.team !== false
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
@@ -99,7 +101,11 @@ function Inbox() {
 
       {/* the clean batch spends the shared AI budget, so only the team token runs it */}
       <div className={`mt-5 grid gap-4 ${getAdminToken() ? 'md:grid-cols-[1fr_20rem]' : ''}`}>
-        <DropZone onSent={onSent} />
+        {canUpload ? <DropZone onSent={onSent} /> : (
+          <p className="rounded-box border border-rule bg-field px-4 py-5 text-sm leading-relaxed text-ink2">
+            {tr('Invoices here are paid from the shared demo vault, so uploading is limited to the Countersign team. You can still pay from your own wallet on the Wallet page.', '这里的发票由共享演示金库付款，所以只有 Countersign 团队可以上传。你仍然可以在“钱包”页面用自己的钱包付款。')}
+          </p>
+        )}
         {getAdminToken() && <BatchBox
           batchId={batchId}
           onStart={async () => {
