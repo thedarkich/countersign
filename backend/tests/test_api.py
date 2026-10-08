@@ -254,7 +254,10 @@ def test_submit_runs_pipeline_and_anonymous_view_redacts(api_system):
 
 def test_naive_block_refusal_and_error_are_distinct(api_system):
     client, _, chain, models = api_system
-    blocked = done(client, submit(client, agent="naive").json()["attempt_id"])
+    # the public challenge only takes the guarded agent; the naive one is an internal test tool
+    assert submit(client, agent="naive").status_code == 400
+    naive = submit(client, agent="naive", route="team", headers=ADMIN).json()["attempt_id"]
+    blocked = done(client, naive, ADMIN)
     assert blocked["outcome"] == "blocked" and blocked["tx"]["reason"] == "PayoutMismatch"
     models.invoice.payee_address = ATTACKER
     refused = done(client, submit(client).json()["attempt_id"])
@@ -264,8 +267,8 @@ def test_naive_block_refusal_and_error_are_distinct(api_system):
     assert failed["outcome"] == "error" and failed["tx"] is None
     assert "PRIVATE" not in json.dumps(failed)
     stats = client.get("/api/stats").json()["outside"]
-    assert stats["chain_blocks"] == 1 and stats["guard_catches"] == 1
-    assert stats["ai_fooled"] == {"guarded": 0, "naive": 1}
+    assert stats["chain_blocks"] == 0 and stats["guard_catches"] == 1  # team runs are not "outside"
+    assert stats["ai_fooled"] == {"guarded": 0, "naive": 0}
     assert len(chain.sent) == 1
 
 

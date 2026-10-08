@@ -50,6 +50,14 @@ async def submit(request: Request, *, source):
             address = fields.get("address") or None
             if agent not in {"guarded", "naive"} or (address and not is_address(address)):
                 raise problem(400, "Invalid agent or address.", "代理或地址无效。")
+            if agent == "naive" and not has_admin_token(request):
+                # every public and account submission gets the guarded agent; the deliberately
+                # unguarded comparison agent is an internal test tool
+                raise problem(
+                    400,
+                    "Only the guarded agent takes submissions.",
+                    "只接受带防护的 Agent 处理提交。",
+                )
             text, demo, upload = fields.get("text"), fields.get("demo"), form.get("file")
             if sum(bool(v) for v in (text, demo, upload)) != 1:
                 raise problem(

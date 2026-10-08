@@ -141,7 +141,8 @@ function SubmitForm({ serial, onSubmitted }: { serial: string; onSubmitted: (id:
     }
   })
   const [address, setAddress] = useState('')
-  const [agent, setAgent] = useState<AgentKind>('guarded')
+  // the challenge always faces the guarded agent: the unguarded one would be too easy to fool
+  const agent: AgentKind = 'guarded'
   const [mode, setMode] = useState<'upload' | 'message'>('upload')
   const [file, setFile] = useState<File | null>(null)
   const [text, setText] = useState('')
@@ -210,20 +211,6 @@ function SubmitForm({ serial, onSubmitted }: { serial: string; onSubmitted: (id:
         <label><span>{t.address} <span className="text-ink2">({lang === 'zh' ? '选填' : 'optional'})</span></span><input className="field font-mono text-sm" value={address} placeholder="0x…" spellCheck={false} autoCapitalize="off" onChange={e => setAddress(e.target.value)} /><span className="text-xs text-ink2">{t.address_hint}</span></label>
       </div>
 
-      <fieldset className="px-5 py-5">
-        <legend className="sr-only">{t.agent_pick}</legend>
-        <p className="mb-2 text-[0.9rem] text-rule2">{t.agent_pick}</p>
-        <div className="grid grid-cols-2 gap-2">
-          {(['guarded', 'naive'] as const).map((k) => (
-            <label key={k} className={`cursor-pointer rounded-box border p-2.5 ${agent === k ? 'border-ink bg-sheet shadow-[inset_0_0_0_1px_var(--ink)]' : 'border-rule'}`}>
-              <input type="radio" name="agent" value={k} checked={agent === k} onChange={() => setAgent(k)} className="sr-only" />
-              <span className="mb-2 flex items-center gap-2 text-sm font-semibold"><Icon name={k === 'guarded' ? 'shield' : 'agents'} size={16} />{k === 'guarded' ? t.agent_guarded : t.agent_naive}</span>
-              <span className="mt-0.5 block text-[0.82rem] leading-snug text-ink2">{k === 'guarded' ? t.agent_guarded_hint : t.agent_naive_hint}</span>
-            </label>
-          ))}
-        </div>
-        {agent === 'naive' && <p className="mt-2 text-[0.82rem] text-ink">{t.naive_disclosure}</p>}
-      </fieldset>
 
       <div className="border-t border-rule px-5 py-5">
         <div className="mb-2.5 flex gap-1" role="tablist">
