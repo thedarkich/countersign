@@ -139,3 +139,26 @@ def test_model_timeout_comes_from_settings(tmp_path):
     assert extractor.gateway.client.timeout == 60
     assert extractor.gateway.client.max_retries == 0
     assert Settings(_env_file=None).llm_timeout_seconds == 75
+
+
+OK_VERDICT = {"verdict": "ok", "risk": 0, "reasons": [], "instructions_found": []}
+
+
+@pytest.mark.parametrize(
+    "content, accepted",
+    [
+        (json.dumps([OK_VERDICT]), True),
+        (json.dumps(json.dumps(OK_VERDICT)), True),
+        (json.dumps([OK_VERDICT, {"verdict": "pay"}]), False),
+        (json.dumps([{**OK_VERDICT, "extra": 1}]), False),
+        ("[]", False),
+    ],
+)
+def test_one_wrapped_object_is_unwrapped_then_strictly_validated(content, accepted):
+    """Live logs showed Extraction model_type errors: the object came wrapped in a list."""
+    gateway = make_gateway(lambda request: response(content), enabled=True)
+    if accepted:
+        assert asyncio.run(invoke(gateway)).verdict == "ok"
+    else:
+        with pytest.raises(ModelUnavailable):
+            asyncio.run(invoke(gateway))

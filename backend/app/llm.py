@@ -17,6 +17,23 @@ from app.model_budget import BudgetExhausted
 Model = TypeVar("Model", bound=BaseModel)
 
 
+def unwrap(payload: str) -> str:
+    """The model sometimes wraps the one requested object in a list or a JSON string ("model_type"
+    errors in the logs). Unwrap exactly that case; anything else goes to strict validation unchanged."""
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        return payload
+    if isinstance(data, str):
+        try:
+            data = json.loads(data)
+        except ValueError:
+            return payload
+    if isinstance(data, list) and len(data) == 1:
+        data = data[0]
+    return json.dumps(data) if isinstance(data, dict) else payload
+
+
 MODEL_ERROR_CODES = frozenset(
     {
         "MODEL_UNAVAILABLE",
@@ -175,7 +192,7 @@ class ModelGateway:
                 raise ModelUnavailable("Model returned empty output.", code="MODEL_OUTPUT_EMPTY")
             if not isinstance(payload, str):
                 raise TypeError("Invalid content envelope")
-            return schema.model_validate_json(payload)
+            return schema.model_validate_json(unwrap(payload))
         except (ValidationError, AttributeError, TypeError) as exc:
             # Never retain the provider body, validation input or raw exception. Error types and
             # field names only, so intermittent schema failures can be told apart in the logs.
