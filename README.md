@@ -12,7 +12,7 @@ The rules bound spending authority. They do **not** prove an invoice is genuine:
 
 **Hackathon result:** 1st place, Public Goods, and 2nd place, Main Track, at 汉客松 S1 & ETH Wuhan 2026. The Blockchain track result is still to be announced.
 
-**The live demo is offline.** During the hackathon (7–9 October 2026) a public site at `139-180-194-19.sslip.io` ran the real backend: invoices read by a real AI model and paid or blocked by the vault on BOT Chain testnet, a public challenge, and a Wallet page that sent real BOT on mainnet. That server has been shut down. Everything it did is still public on chain (see [on-chain evidence](#on-chain-evidence)), and you can run the whole app yourself: [mock frontend](#try-the-frontend) or [backend and contract](#backend-and-contract-checks).
+**Live demo: [139-180-194-19.sslip.io](https://139-180-194-19.sslip.io/#/inbox).** It runs the real backend: invoices read by a real AI model and paid or blocked by the vault on BOT Chain testnet, a public challenge, and a Wallet page that sends real BOT on mainnet. The server was briefly shut down on 9 October 2026 and restored the same day at the same address from a verified backup, with all accounts, invoices and history. Everything it does is public on chain (see [on-chain evidence](#on-chain-evidence)), and you can also run the whole app yourself: [mock frontend](#try-the-frontend) or [backend and contract](#backend-and-contract-checks).
 
 | Part | What it does |
 |---|---|
